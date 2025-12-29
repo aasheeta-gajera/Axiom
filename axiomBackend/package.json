@@ -2,7 +2,7 @@
   "name": "axiom-backend",
   "version": "1.0.0",
   "description": "Axiom No-Code Platform Backend",
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
