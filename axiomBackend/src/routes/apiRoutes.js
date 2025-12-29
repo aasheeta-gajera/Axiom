@@ -1,0 +1,109 @@
+// const express = require('express');
+// const router = express.Router();
+// const Project = require('../models/Project');
+// const auth = require('../middleware/auth');
+
+import { Router } from 'express';
+import {Project} from '../models/Project.js';
+import {auth} from '../middleware/auth.js';
+import express from 'express';
+const router = Router();
+
+// Add API endpoint to project (Phase 2)
+router.post('/:projectId/endpoints', auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    
+    const newEndpoint = {
+      id: `api_${Date.now()}`,
+      method: req.body.method,
+      path: req.body.path,
+      description: req.body.description,
+      auth: req.body.auth || false,
+      controller: req.body.controller,
+      model: req.body.model
+    };
+
+    project.apis.push(newEndpoint);
+    await project.save();
+
+    res.status(201).json(newEndpoint);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all API endpoints for project
+router.get('/:projectId/endpoints', auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    res.json(project.apis);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update API endpoint
+router.put('/:projectId/endpoints/:endpointId', auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    const endpoint = project.apis.id(req.params.endpointId);
+    
+    if (!endpoint) {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
+
+    Object.assign(endpoint, req.body);
+    await project.save();
+
+    res.json(endpoint);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete API endpoint
+router.delete('/:projectId/endpoints/:endpointId', auth, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    project.apis = project.apis.filter(api => api.id !== req.params.endpointId);
+    await project.save();
+
+    res.json({ message: 'Endpoint deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate CRUD APIs for a model
+router.post('/:projectId/generate-crud', auth, async (req, res) => {
+  try {
+    const { modelName } = req.body;
+    const project = await Project.findById(req.params.projectId);
+
+    const crudEndpoints = [
+      { method: 'GET', path: `/${modelName.toLowerCase()}`, description: `Get all ${modelName}` },
+      { method: 'GET', path: `/${modelName.toLowerCase()}/:id`, description: `Get ${modelName} by ID` },
+      { method: 'POST', path: `/${modelName.toLowerCase()}`, description: `Create ${modelName}` },
+      { method: 'PUT', path: `/${modelName.toLowerCase()}/:id`, description: `Update ${modelName}` },
+      { method: 'DELETE', path: `/${modelName.toLowerCase()}/:id`, description: `Delete ${modelName}` }
+    ];
+
+    crudEndpoints.forEach(endpoint => {
+      project.apis.push({
+        id: `api_${Date.now()}_${Math.random()}`,
+        ...endpoint,
+        model: modelName
+      });
+    });
+
+    await project.save();
+    res.json({ message: 'CRUD endpoints generated', endpoints: crudEndpoints });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// module.exports = router;
+
+export const apiRoutes = router;
