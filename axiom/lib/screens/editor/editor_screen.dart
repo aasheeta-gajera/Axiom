@@ -15,6 +15,9 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
+  bool _showPalette = true;
+  bool _showProperties = true;
+
   @override
   void initState() {
     super.initState();
@@ -28,40 +31,168 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 900;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: Column(
         children: [
           const TopToolbar(),
           Expanded(
-            child: Row(
-              children: [
-                // Left sidebar - Widget Palette
-                Container(
-                  width: 280,
-                  color: Colors.white,
-                  child: const WidgetPalette(),
-                ),
+            child: isMobile
+                ? _buildMobileLayout()
+                : isSmallScreen
+                ? _buildTabletLayout()
+                : _buildDesktopLayout(),
+          ),
+        ],
+      ),
+      // Mobile FABs for toggling panels
+      floatingActionButton: isMobile
+          ? Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'palette',
+            onPressed: () => _showBottomSheet(context, isWidget: true),
+            child: const Icon(Icons.widgets),
+          ),
+          const SizedBox(height: 8),
+          FloatingActionButton.small(
+            heroTag: 'properties',
+            onPressed: () => _showBottomSheet(context, isWidget: false),
+            child: const Icon(Icons.settings),
+          ),
+        ],
+      )
+          : null,
+    );
+  }
 
-                // Center - Canvas Area
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    color: Colors.grey[200],
-                    child: const CanvasArea(),
+  Widget _buildDesktopLayout() {
+    return Row(
+      children: [
+        // Left sidebar - Widget Palette
+        if (_showPalette)
+          Container(
+            width: 280,
+            color: Colors.white,
+            child: const WidgetPalette(),
+          ),
+
+        // Center - Canvas Area
+        Expanded(
+          child: Container(
+            color: Colors.grey[200],
+            child: const CanvasArea(),
+          ),
+        ),
+
+        // Right sidebar - Properties Panel
+        if (_showProperties)
+          Container(
+            width: 320,
+            color: Colors.white,
+            child: const PropertiesPanel(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTabletLayout() {
+    return Row(
+      children: [
+        // Canvas Area (full width on tablet)
+        Expanded(
+          child: Container(
+            color: Colors.grey[200],
+            child: const CanvasArea(),
+          ),
+        ),
+
+        // Collapsible Properties Panel
+        if (_showProperties)
+          Container(
+            width: 300,
+            color: Colors.white,
+            child: Column(
+              children: [
+                Container(
+                  color: Colors.grey[100],
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Properties',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() => _showProperties = false),
+                      ),
+                    ],
                   ),
                 ),
-
-                // Right sidebar - Properties Panel
-                Container(
-                  width: 320,
-                  color: Colors.white,
-                  child: const PropertiesPanel(),
-                ),
+                const Expanded(child: PropertiesPanel()),
               ],
             ),
           ),
-        ],
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    // Mobile: Canvas only, panels in bottom sheets
+    return Container(
+      color: Colors.grey[200],
+      child: const CanvasArea(),
+    );
+  }
+
+  void _showBottomSheet(BuildContext context, {required bool isWidget}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  isWidget ? 'Widget Palette' : 'Properties',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: isWidget
+                    ? const WidgetPalette()
+                    : const PropertiesPanel(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

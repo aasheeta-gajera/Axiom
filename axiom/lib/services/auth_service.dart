@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'https://axiom-mmd4.onrender.com/api';
   String? _token;
   Map<String, dynamic>? _user;
 

@@ -64,10 +64,7 @@ class PropertiesPanel extends StatelessWidget {
           Text(
             'Select a widget\nto edit properties',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -102,11 +99,7 @@ class PropertiesPanel extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Dynamic properties based on widget type
-          ..._buildWidgetSpecificProperties(
-            context,
-            selectedWidget,
-            provider,
-          ),
+          ..._buildWidgetSpecificProperties(context, selectedWidget, provider),
         ],
       ),
     );
@@ -123,122 +116,188 @@ class PropertiesPanel extends StatelessWidget {
     switch (widget.type) {
       case 'Text':
         fields.addAll([
-          _buildTextField(
-            'Text',
-            props['text'] ?? '',
-                (value) => provider.updateWidgetProperty(widget.id, 'text', value),
-          ),
+          _buildTextField('Text', props['text'] ?? '',
+                  (value) => provider.updateWidgetProperty(widget.id, 'text', value)),
           const SizedBox(height: 16),
-          _buildNumberField(
-            'Font Size',
-            props['fontSize']?.toDouble() ?? 16.0,
-                (value) => provider.updateWidgetProperty(widget.id, 'fontSize', value),
-          ),
+          _buildNumberField('Font Size', props['fontSize']?.toDouble() ?? 16.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'fontSize', value)),
           const SizedBox(height: 16),
-          _buildColorPicker(
-            context,
-            'Text Color',
-            props['color'] ?? '#000000',
-                (color) => provider.updateWidgetProperty(widget.id, 'color', color),
-          ),
+          _buildColorPicker(context, 'Text Color', props['color'] ?? '#000000',
+                  (color) => provider.updateWidgetProperty(widget.id, 'color', color)),
           const SizedBox(height: 16),
-          _buildDropdown(
-            'Font Weight',
-            props['fontWeight'] ?? 'normal',
-            ['normal', 'bold'],
-                (value) => provider.updateWidgetProperty(widget.id, 'fontWeight', value),
-          ),
+          _buildDropdown('Font Weight', props['fontWeight'] ?? 'normal',
+              ['normal', 'bold', 'w300', 'w500', 'w700'],
+                  (value) => provider.updateWidgetProperty(widget.id, 'fontWeight', value)),
+          const SizedBox(height: 16),
+          _buildDropdown('Alignment', props['alignment'] ?? 'left',
+              ['left', 'center', 'right'],
+                  (value) => provider.updateWidgetProperty(widget.id, 'alignment', value)),
         ]);
         break;
 
       case 'Button':
         fields.addAll([
-          _buildTextField(
-            'Button Text',
-            props['text'] ?? '',
-                (value) => provider.updateWidgetProperty(widget.id, 'text', value),
-          ),
+          _buildTextField('Button Text', props['text'] ?? '',
+                  (value) => provider.updateWidgetProperty(widget.id, 'text', value)),
           const SizedBox(height: 16),
-          _buildColorPicker(
-            context,
-            'Background Color',
-            props['backgroundColor'] ?? '#2196F3',
-                (color) => provider.updateWidgetProperty(widget.id, 'backgroundColor', color),
-          ),
+          _buildColorPicker(context, 'Background Color',
+              props['backgroundColor'] ?? '#2196F3',
+                  (color) => provider.updateWidgetProperty(widget.id, 'backgroundColor', color)),
           const SizedBox(height: 16),
-          _buildColorPicker(
-            context,
-            'Text Color',
-            props['color'] ?? '#FFFFFF',
-                (color) => provider.updateWidgetProperty(widget.id, 'color', color),
-          ),
+          _buildColorPicker(context, 'Text Color', props['color'] ?? '#FFFFFF',
+                  (color) => provider.updateWidgetProperty(widget.id, 'color', color)),
+          const SizedBox(height: 16),
+          _buildNumberField('Font Size', props['fontSize']?.toDouble() ?? 16.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'fontSize', value)),
+          const SizedBox(height: 16),
+          _buildNumberField('Border Radius', props['borderRadius']?.toDouble() ?? 8.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'borderRadius', value)),
         ]);
         break;
 
       case 'Container':
         fields.addAll([
-          _buildNumberField(
-            'Width',
-            props['width']?.toDouble() ?? 200.0,
-                (value) => provider.updateWidgetProperty(widget.id, 'width', value),
-          ),
+          _buildNumberField('Width', props['width']?.toDouble() ?? 200.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'width', value)),
           const SizedBox(height: 16),
-          _buildNumberField(
-            'Height',
-            props['height']?.toDouble() ?? 100.0,
-                (value) => provider.updateWidgetProperty(widget.id, 'height', value),
-          ),
+          _buildNumberField('Height', props['height']?.toDouble() ?? 100.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'height', value)),
           const SizedBox(height: 16),
-          _buildColorPicker(
-            context,
-            'Background Color',
-            props['backgroundColor'] ?? '#E3F2FD',
-                (color) => provider.updateWidgetProperty(widget.id, 'backgroundColor', color),
-          ),
+          _buildColorPicker(context, 'Background Color',
+              props['backgroundColor'] ?? '#E3F2FD',
+                  (color) => provider.updateWidgetProperty(widget.id, 'backgroundColor', color)),
           const SizedBox(height: 16),
-          _buildNumberField(
-            'Border Radius',
-            props['borderRadius']?.toDouble() ?? 8.0,
-                (value) => provider.updateWidgetProperty(widget.id, 'borderRadius', value),
-          ),
+          _buildNumberField('Border Radius', props['borderRadius']?.toDouble() ?? 8.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'borderRadius', value)),
+          const SizedBox(height: 16),
+          _buildPaddingControl(context, 'Padding', props['padding'] ?? {},
+                  (padding) => provider.updateWidgetProperty(widget.id, 'padding', padding)),
+        ]);
+        break;
+
+      case 'Row':
+        fields.addAll([
+          _buildNumberField('Width', props['width']?.toDouble() ?? 300.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'width', value)),
+          const SizedBox(height: 16),
+          _buildNumberField('Height', props['height']?.toDouble() ?? 100.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'height', value)),
+          const SizedBox(height: 16),
+          _buildDropdown('Main Axis Alignment',
+              props['mainAxisAlignment'] ?? 'start',
+              ['start', 'center', 'end', 'spaceBetween', 'spaceAround', 'spaceEvenly'],
+                  (value) => provider.updateWidgetProperty(widget.id, 'mainAxisAlignment', value)),
+          const SizedBox(height: 16),
+          _buildDropdown('Cross Axis Alignment',
+              props['crossAxisAlignment'] ?? 'center',
+              ['start', 'center', 'end', 'stretch'],
+                  (value) => provider.updateWidgetProperty(widget.id, 'crossAxisAlignment', value)),
+          const SizedBox(height: 16),
+          _buildColorPicker(context, 'Background Color',
+              props['backgroundColor'] ?? '#E3F2FD',
+                  (color) => provider.updateWidgetProperty(widget.id, 'backgroundColor', color)),
+          const SizedBox(height: 16),
+          _buildPaddingControl(context, 'Padding', props['padding'] ?? {},
+                  (padding) => provider.updateWidgetProperty(widget.id, 'padding', padding)),
+        ]);
+        break;
+
+      case 'Column':
+        fields.addAll([
+          _buildNumberField('Width', props['width']?.toDouble() ?? 150.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'width', value)),
+          const SizedBox(height: 16),
+          _buildNumberField('Height', props['height']?.toDouble() ?? 300.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'height', value)),
+          const SizedBox(height: 16),
+          _buildDropdown('Main Axis Alignment',
+              props['mainAxisAlignment'] ?? 'start',
+              ['start', 'center', 'end', 'spaceBetween', 'spaceAround', 'spaceEvenly'],
+                  (value) => provider.updateWidgetProperty(widget.id, 'mainAxisAlignment', value)),
+          const SizedBox(height: 16),
+          _buildDropdown('Cross Axis Alignment',
+              props['crossAxisAlignment'] ?? 'center',
+              ['start', 'center', 'end', 'stretch'],
+                  (value) => provider.updateWidgetProperty(widget.id, 'crossAxisAlignment', value)),
+          const SizedBox(height: 16),
+          _buildColorPicker(context, 'Background Color',
+              props['backgroundColor'] ?? '#FFF3E0',
+                  (color) => provider.updateWidgetProperty(widget.id, 'backgroundColor', color)),
+          const SizedBox(height: 16),
+          _buildPaddingControl(context, 'Padding', props['padding'] ?? {},
+                  (padding) => provider.updateWidgetProperty(widget.id, 'padding', padding)),
+        ]);
+        break;
+
+      case 'AppBar':
+        fields.addAll([
+          _buildTextField('Title', props['title'] ?? 'App Bar',
+                  (value) => provider.updateWidgetProperty(widget.id, 'title', value)),
+          const SizedBox(height: 16),
+          _buildColorPicker(context, 'Background Color',
+              props['backgroundColor'] ?? '#2196F3',
+                  (color) => provider.updateWidgetProperty(widget.id, 'backgroundColor', color)),
+          const SizedBox(height: 16),
+          _buildColorPicker(context, 'Text Color', props['color'] ?? '#FFFFFF',
+                  (color) => provider.updateWidgetProperty(widget.id, 'color', color)),
+          const SizedBox(height: 16),
+          _buildNumberField('Elevation', props['elevation']?.toDouble() ?? 4.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'elevation', value)),
+          const SizedBox(height: 16),
+          _buildSwitch('Center Title', props['centerTitle'] ?? true,
+                  (value) => provider.updateWidgetProperty(widget.id, 'centerTitle', value)),
         ]);
         break;
 
       case 'Image':
         fields.addAll([
-          _buildTextField(
-            'Image URL',
-            props['image'] ?? '',
-                (value) => provider.updateWidgetProperty(widget.id, 'image', value),
-          ),
+          _buildTextField('Image URL', props['image'] ?? '',
+                  (value) => provider.updateWidgetProperty(widget.id, 'image', value)),
           const SizedBox(height: 16),
-          _buildNumberField(
-            'Width',
-            props['width']?.toDouble() ?? 200.0,
-                (value) => provider.updateWidgetProperty(widget.id, 'width', value),
-          ),
+          _buildNumberField('Width', props['width']?.toDouble() ?? 200.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'width', value)),
           const SizedBox(height: 16),
-          _buildNumberField(
-            'Height',
-            props['height']?.toDouble() ?? 200.0,
-                (value) => provider.updateWidgetProperty(widget.id, 'height', value),
-          ),
+          _buildNumberField('Height', props['height']?.toDouble() ?? 200.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'height', value)),
+          const SizedBox(height: 16),
+          _buildDropdown('Fit', props['fit'] ?? 'cover',
+              ['cover', 'contain', 'fill', 'fitWidth', 'fitHeight'],
+                  (value) => provider.updateWidgetProperty(widget.id, 'fit', value)),
         ]);
         break;
 
       case 'TextField':
         fields.addAll([
-          _buildTextField(
-            'Hint Text',
-            props['hint'] ?? '',
-                (value) => provider.updateWidgetProperty(widget.id, 'hint', value),
-          ),
+          _buildTextField('Hint Text', props['hint'] ?? '',
+                  (value) => provider.updateWidgetProperty(widget.id, 'hint', value)),
           const SizedBox(height: 16),
-          _buildNumberField(
-            'Width',
-            props['width']?.toDouble() ?? 250.0,
-                (value) => provider.updateWidgetProperty(widget.id, 'width', value),
-          ),
+          _buildTextField('Label', props['label'] ?? '',
+                  (value) => provider.updateWidgetProperty(widget.id, 'label', value)),
+          const SizedBox(height: 16),
+          _buildNumberField('Width', props['width']?.toDouble() ?? 250.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'width', value)),
+          const SizedBox(height: 16),
+          _buildSwitch('Obscure Text', props['obscureText'] ?? false,
+                  (value) => provider.updateWidgetProperty(widget.id, 'obscureText', value)),
+          const SizedBox(height: 16),
+          _buildTextField('Field Key', props['fieldKey'] ?? '',
+                  (value) => provider.updateWidgetProperty(widget.id, 'fieldKey', value)),
+        ]);
+        break;
+
+      case 'Card':
+        fields.addAll([
+          _buildNumberField('Width', props['width']?.toDouble() ?? 250.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'width', value)),
+          const SizedBox(height: 16),
+          _buildNumberField('Height', props['height']?.toDouble() ?? 150.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'height', value)),
+          const SizedBox(height: 16),
+          _buildNumberField('Elevation', props['elevation']?.toDouble() ?? 4.0,
+                  (value) => provider.updateWidgetProperty(widget.id, 'elevation', value)),
+          const SizedBox(height: 16),
+          _buildColorPicker(context, 'Color', props['color'] ?? '#FFFFFF',
+                  (color) => provider.updateWidgetProperty(widget.id, 'color', color)),
         ]);
         break;
     }
@@ -250,10 +309,7 @@ class PropertiesPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 8),
         TextField(
           controller: TextEditingController(text: value),
@@ -271,10 +327,7 @@ class PropertiesPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 8),
         TextField(
           controller: TextEditingController(text: value.toString()),
@@ -292,6 +345,16 @@ class PropertiesPanel extends StatelessWidget {
     );
   }
 
+  Widget _buildSwitch(String label, bool value, Function(bool) onChanged) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        Switch(value: value, onChanged: onChanged),
+      ],
+    );
+  }
+
   Widget _buildColorPicker(
       BuildContext context,
       String label,
@@ -303,10 +366,7 @@ class PropertiesPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 8),
         InkWell(
           onTap: () {
@@ -364,13 +424,10 @@ class PropertiesPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: value,
+          value: options.contains(value) ? value : options.first,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -380,6 +437,76 @@ class PropertiesPanel extends StatelessWidget {
           }).toList(),
           onChanged: (val) {
             if (val != null) onChanged(val);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaddingControl(
+      BuildContext context,
+      String label,
+      Map<String, dynamic> padding,
+      Function(Map<String, dynamic>) onChanged,
+      ) {
+    final top = (padding['top'] ?? 0).toDouble();
+    final left = (padding['left'] ?? 0).toDouble();
+    final right = (padding['right'] ?? 0).toDouble();
+    final bottom = (padding['bottom'] ?? 0).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSmallNumberField('T', top, (value) {
+                onChanged({...padding, 'top': value});
+              }),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildSmallNumberField('L', left, (value) {
+                onChanged({...padding, 'left': value});
+              }),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildSmallNumberField('R', right, (value) {
+                onChanged({...padding, 'right': value});
+              }),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildSmallNumberField('B', bottom, (value) {
+                onChanged({...padding, 'bottom': value});
+              }),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmallNumberField(String label, double value, Function(double) onChanged) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: TextEditingController(text: value.toInt().toString()),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          ),
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12),
+          onChanged: (val) {
+            final numValue = double.tryParse(val);
+            if (numValue != null) onChanged(numValue);
           },
         ),
       ],

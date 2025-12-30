@@ -4,7 +4,7 @@ import '../models/widget_model.dart';
 import 'auth_service.dart';
 
 class ProjectService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'https://axiom-mmd4.onrender.com/api';
   final AuthService _authService = AuthService();
 
   Future<List<ProjectModel>> getProjects() async {

@@ -5,7 +5,7 @@ class WebSocketService {
   String? _currentProjectId;
 
   void connect() {
-    _socket = IO.io('http://localhost:5000', <String, dynamic>{
+    _socket = IO.io('https://axiom-mmd4.onrender.com', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });
