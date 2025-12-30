@@ -1,7 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/widget_provider.dart';
 import '../../providers/project_provider.dart';
+import '../../services/websocket_service.dart';
 import 'widgets/widget_palette.dart';
 import 'widgets/canvas_area.dart';
 import 'widgets/properties_panel.dart';
@@ -21,12 +22,24 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ ADD THIS
+    final wsService = context.read<WebSocketService>();
+    wsService.connect();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final projectId = ModalRoute.of(context)?.settings.arguments as String?;
       if (projectId != null) {
         context.read<ProjectProvider>().loadProject(projectId);
+        wsService.joinProject(projectId); // ✅ Join project room
       }
     });
+  }
+
+  @override
+  void dispose() {
+    context.read<WebSocketService>().disconnect(); // ✅ Clean up
+    super.dispose();
   }
 
   @override
