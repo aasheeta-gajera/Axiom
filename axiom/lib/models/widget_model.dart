@@ -8,6 +8,13 @@ class WidgetModel {
   Offset position;
   String? parent;
 
+  // NEW: API Integration properties
+  String? apiEndpointId;
+  String? apiMethod;
+  String? apiPath;
+  Map<String, String>? apiHeaders;
+  bool requiresAuth;
+
   WidgetModel({
     required this.id,
     required this.type,
@@ -15,6 +22,11 @@ class WidgetModel {
     this.children = const [],
     this.position = Offset.zero,
     this.parent,
+    this.apiEndpointId,
+    this.apiMethod,
+    this.apiPath,
+    this.apiHeaders,
+    this.requiresAuth = false,
   });
 
   factory WidgetModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +45,13 @@ class WidgetModel {
       )
           : Offset.zero,
       parent: json['parent'],
+      apiEndpointId: json['apiEndpointId'],
+      apiMethod: json['apiMethod'],
+      apiPath: json['apiPath'],
+      apiHeaders: json['apiHeaders'] != null
+          ? Map<String, String>.from(json['apiHeaders'])
+          : null,
+      requiresAuth: json['requiresAuth'] ?? false,
     );
   }
 
@@ -44,6 +63,11 @@ class WidgetModel {
       'children': children.map((e) => e.toJson()).toList(),
       'position': {'x': position.dx, 'y': position.dy},
       'parent': parent,
+      'apiEndpointId': apiEndpointId,
+      'apiMethod': apiMethod,
+      'apiPath': apiPath,
+      'apiHeaders': apiHeaders,
+      'requiresAuth': requiresAuth,
     };
   }
 
@@ -54,6 +78,11 @@ class WidgetModel {
     List<WidgetModel>? children,
     Offset? position,
     String? parent,
+    String? apiEndpointId,
+    String? apiMethod,
+    String? apiPath,
+    Map<String, String>? apiHeaders,
+    bool? requiresAuth,
   }) {
     return WidgetModel(
       id: id ?? this.id,
@@ -62,10 +91,16 @@ class WidgetModel {
       children: children ?? this.children,
       position: position ?? this.position,
       parent: parent ?? this.parent,
+      apiEndpointId: apiEndpointId ?? this.apiEndpointId,
+      apiMethod: apiMethod ?? this.apiMethod,
+      apiPath: apiPath ?? this.apiPath,
+      apiHeaders: apiHeaders ?? this.apiHeaders,
+      requiresAuth: requiresAuth ?? this.requiresAuth,
     );
   }
 }
 
+// Keep all other model classes (ProjectModel, ScreenModel, etc.) the same as in your original file
 class ProjectModel {
   String id;
   String name;

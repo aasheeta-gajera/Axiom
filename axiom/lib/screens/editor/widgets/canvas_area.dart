@@ -94,37 +94,41 @@ class _CanvasAreaState extends State<CanvasArea> {
     final isSelected = provider.selectedWidget?.id == widget.id;
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final scale = isMobile ? 0.7 : 1.0;
 
     return Positioned(
-      left: isMobile ? widget.position.dx * 0.7 : widget.position.dx,
-      top: isMobile ? widget.position.dy * 0.7 : widget.position.dy,
-      child: GestureDetector(
-        onTap: () => provider.selectWidget(widget),
-        child: Draggable<WidgetModel>(
-          data: widget,
-          feedback: Material(
-            elevation: 8,
-            child: Transform.scale(
-              scale: isMobile ? 0.8 : 1.0,
-              child: _renderWidget(widget, true),
+      left: isMobile ? widget.position.dx * 0.7 : scale,
+      top: isMobile ? widget.position.dy * 0.7 : scale,
+      child: Transform.scale(
+        scale: scale,
+        child: GestureDetector(
+          onTap: () => provider.selectWidget(widget),
+          child: Draggable<WidgetModel>(
+            data: widget,
+            feedback: Material(
+              elevation: 8,
+              child: Transform.scale(
+                scale: isMobile ? 0.8 : 1.0,
+                child: _renderWidget(widget, true),
+              ),
             ),
-          ),
-          childWhenDragging: Opacity(
-            opacity: 0.3,
-            child: _renderWidget(widget, false),
-          ),
-          onDragEnd: (details) {
-            final RenderBox renderBox = context.findRenderObject() as RenderBox;
-            final localOffset = renderBox.globalToLocal(details.offset);
-            provider.updateWidgetPosition(widget.id, localOffset);
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              border: isSelected
-                  ? Border.all(color: Colors.blue, width: 2)
-                  : null,
+            childWhenDragging: Opacity(
+              opacity: 0.3,
+              child: _renderWidget(widget, false),
             ),
-            child: _renderWidget(widget, false),
+            onDragEnd: (details) {
+              final RenderBox renderBox = context.findRenderObject() as RenderBox;
+              final localOffset = renderBox.globalToLocal(details.offset);
+              provider.updateWidgetPosition(widget.id, localOffset);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                border: isSelected
+                    ? Border.all(color: Colors.blue, width: 2)
+                    : null,
+              ),
+              child: _renderWidget(widget, false),
+            ),
           ),
         ),
       ),

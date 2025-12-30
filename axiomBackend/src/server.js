@@ -9,6 +9,7 @@ import {componentRoutes} from './routes/componentRoutes.js';
 import {apiRoutes} from './routes/apiRoutes.js';
 import {authRoutes} from './routes/authRoutes.js';
 import {aiRoutes} from './routes/aiRoutes.js';
+import winston from 'winston';
 
 const app = express();
 const server = http.createServer(app);
@@ -19,12 +20,41 @@ const io = new Server(server, {
   }
 });
 
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' }),
+  ],
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+  }));
+}
+
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://your-production-domain.com'
+    : 'http://localhost:8080',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true }));
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).json({ 
+    error: 'Something went wrong!', 
+    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message 
+  });
+});
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -77,3 +107,5 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
+

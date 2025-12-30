@@ -47,13 +47,11 @@ router.get('/:projectId/endpoints', auth, async (req, res) => {
 router.put('/:projectId/endpoints/:endpointId', auth, async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
-    const endpoint = project.apis.id(req.params.endpointId);
-    
-    if (!endpoint) {
+    const endpointIndex = project.apis.findIndex(api => api.id === req.params.endpointId);
+    if (endpointIndex === -1) {
       return res.status(404).json({ error: 'Endpoint not found' });
     }
-
-    Object.assign(endpoint, req.body);
+    Object.assign(project.apis[endpointIndex], req.body);
     await project.save();
 
     res.json(endpoint);

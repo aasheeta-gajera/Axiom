@@ -101,7 +101,9 @@ const projectSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
-
+projectSchema.index({ owner: 1 });
+projectSchema.index({ name: 'text', description: 'text' });
+projectSchema.index({ createdAt: -1 });
 // module.exports = mongoose.model('Project', projectSchema);
 
 export const Project = mongoose.model('Project', projectSchema);

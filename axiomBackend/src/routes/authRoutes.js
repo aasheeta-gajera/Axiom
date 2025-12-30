@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import {User} from '../models/User.js';
-import console from 'console';
 const router = Router();
 
 // Register

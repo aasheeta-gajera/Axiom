@@ -51,8 +51,9 @@ router.put('/:projectId/models/:modelId', auth, async (req, res) => {
     }
 
     project.dataModels[modelIndex] = {
-      ...project.dataModels[modelIndex],
-      ...req.body
+      ...project.dataModels[modelIndex].toObject(),
+      ...req.body,
+      id: project.dataModels[modelIndex].id // Ensure ID remains unchanged
     };
     
     await project.save();

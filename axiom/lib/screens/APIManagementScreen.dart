@@ -5,6 +5,8 @@ import '../../models/widget_model.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../services/auth_service.dart';
+
 class APIManagementScreen extends StatefulWidget {
   const APIManagementScreen({super.key});
 
@@ -256,12 +258,12 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
     );
   }
 
-  Future<void> _createAPI(
-      String method, String path, String description, bool auth) async {
+  Future<void> _createAPI(String method, String path, String description, bool auth) async {
     setState(() => _isLoading = true);
 
     try {
       final projectProvider = context.read<ProjectProvider>();
+      final authService = context.read<AuthService>(); // ✅ Get auth service
       final projectId = projectProvider.currentProject?.id;
 
       if (projectId == null) return;
@@ -270,7 +272,7 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
         Uri.parse('https://axiom-mmd4.onrender.com/api/apis/$projectId/endpoints'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${projectProvider.currentProject?.name}',
+          'Authorization': 'Bearer ${authService.token}', // ✅ Use real token
         },
         body: json.encode({
           'method': method,
