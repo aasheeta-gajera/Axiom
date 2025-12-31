@@ -37,6 +37,7 @@ children: [{
 
 const apiEndpointSchema = new mongoose.Schema({
   id: { type: String, required: true },
+  name: { type: String, required: true }, // NEW
   method: { 
     type: String, 
     enum: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -44,9 +45,21 @@ const apiEndpointSchema = new mongoose.Schema({
   },
   path: { type: String, required: true },
   description: String,
+  purpose: { type: String, default: 'create' }, // NEW
   auth: { type: Boolean, default: false },
   controller: String,
-  model: String
+  model: String,
+  collection: String, // NEW
+  fields: [{ // NEW
+    name: String,
+    type: String,
+    required: Boolean,
+    unique: Boolean,
+    validation: String
+  }],
+  createCollection: { type: Boolean, default: false }, // NEW
+  requestExample: Object, // NEW
+  responseExample: Object // NEW
 }, { _id: false });
 
 const dataModelSchema = new mongoose.Schema({
@@ -92,6 +105,7 @@ const projectSchema = new mongoose.Schema({
   },
   apis: [apiEndpointSchema],
   dataModels: [dataModelSchema],
+   collections: [String],
   flutterCode: String,
   backendCode: String,
   collaborators: [{
@@ -101,6 +115,8 @@ const projectSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+
 projectSchema.index({ owner: 1 });
 projectSchema.index({ name: 'text', description: 'text' });
 projectSchema.index({ createdAt: -1 });

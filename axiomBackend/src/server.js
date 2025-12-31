@@ -6,6 +6,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import {projectRoutes} from './routes/projectRoutes.js';
 import {componentRoutes} from './routes/componentRoutes.js';
+import {enhancedApiRoutes} from './routes/enhancedApiRoutes.js';
 import {apiRoutes} from './routes/apiRoutes.js';
 import {authRoutes} from './routes/authRoutes.js';
 import {aiRoutes} from './routes/aiRoutes.js';
@@ -36,6 +37,7 @@ app.use('/api/components', componentRoutes);
 app.use('/api/apis', apiRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/enhanced', enhancedApiRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
