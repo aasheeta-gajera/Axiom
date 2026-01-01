@@ -1,7 +1,3 @@
-// const express = require('express');
-// const router = express.Router();
-// const Project = require('../models/Project');
-// const auth = require('../middleware/auth');
 
 import { Router } from 'express';
 import {Project} from '../models/Project.js';
