@@ -33,9 +33,12 @@ router.post('/', auth, async (req, res) => {
 // Get all projects for user
 router.get('/', auth, async (req, res) => {
   try {
-    const projects = await Project.find({ owner: req.userId });
+    console.log('🔍 Loading projects for user:', req.userId);
+    const projects = await Project.find();
+    console.log('📊 Found projects:', projects.length);
     res.json(projects);
   } catch (error) {
+    console.error('❌ Error loading projects:', error);
     res.status(500).json({ error: error.message });
   }
 });

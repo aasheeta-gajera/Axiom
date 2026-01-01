@@ -46,4 +46,4 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 
 userSchema.index({ email: 1 }, { unique: true });
 
-export const User = mongoose.model('User', userSchema, 'axiom');
+export const User = mongoose.model('User', userSchema);
