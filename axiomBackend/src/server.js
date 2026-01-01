@@ -5,11 +5,9 @@ import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
 import {projectRoutes} from './routes/projectRoutes.js';
-import {componentRoutes} from './routes/componentRoutes.js';
-import {enhancedApiRoutes} from './routes/enhancedApiRoutes.js';
 import {apiRoutes} from './routes/apiRoutes.js';
 import {authRoutes} from './routes/authRoutes.js';
-import {aiRoutes} from './routes/aiRoutes.js';
+import dynamicApiRoutes from './routes/dynamicApiRoutes.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -24,8 +22,6 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true }));
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -33,11 +29,9 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 app.use('/api/projects', projectRoutes);
-app.use('/api/components', componentRoutes);
 app.use('/api/apis', apiRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/enhanced', enhancedApiRoutes);
+app.use('/api', dynamicApiRoutes); // Dynamic API execution
 
 // Health check
 app.get('/health', (req, res) => {
