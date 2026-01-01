@@ -10,9 +10,16 @@ router.post('/dynamic/:collection', async (req, res) => {
     const { collection } = req.params;
     const { method, data, purpose } = req.body;
     
-    // Create dynamic model for collection
+    console.log('🔥 Creating model for collection:', collection);
+    console.log('📝 Data received:', data);
+    
+    // Create dynamic model for collection with proper collection name
     const DynamicModel = mongoose.models[collection] || 
-      mongoose.model(collection, new mongoose.Schema({}, { strict: false, collection }));
+      mongoose.model(collection, new mongoose.Schema({}, { 
+        strict: false, 
+        collection: collection, // Explicitly set collection name
+        timestamps: true 
+      }));
     
     if (purpose === 'register') {
       // Handle user registration
@@ -28,7 +35,10 @@ router.post('/dynamic/:collection', async (req, res) => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
+    
+    console.log('💾 Saving item:', newItem);
     await newItem.save();
+    console.log('✅ Item saved successfully!');
     
     res.status(201).json({ 
       success: true, 
@@ -46,14 +56,21 @@ router.post('/dynamic/:collection', async (req, res) => {
 router.get('/dynamic/:collection', async (req, res) => {
   try {
     const { collection } = req.params;
+    console.log('📖 Getting data from collection:', collection);
     
     const DynamicModel = mongoose.models[collection] || 
-      mongoose.model(collection, new mongoose.Schema({}, { strict: false, collection }));
+      mongoose.model(collection, new mongoose.Schema({}, { 
+        strict: false, 
+        collection: collection,
+        timestamps: true 
+      }));
     
     const items = await DynamicModel.find({});
+    console.log('📊 Found', items.length, 'items');
     res.json({ success: true, data: items });
     
   } catch (error) {
+    console.error('Get Data Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
