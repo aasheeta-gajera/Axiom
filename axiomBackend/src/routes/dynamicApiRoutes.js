@@ -13,13 +13,13 @@ router.post('/dynamic/:collection', async (req, res) => {
     console.log('🔥 Creating model for collection:', collection);
     console.log('📝 Data received:', data);
     
-    // Create dynamic model for collection with proper collection name
+    // Create dynamic model for collection with explicit database
     const DynamicModel = mongoose.models[collection] || 
       mongoose.model(collection, new mongoose.Schema({}, { 
         strict: false, 
-        collection: collection, // Explicitly set collection name
+        collection: collection,
         timestamps: true 
-      }));
+      }), 'axiom'); // Explicitly use 'axiom' database
     
     if (purpose === 'register') {
       // Handle user registration
@@ -63,7 +63,7 @@ router.get('/dynamic/:collection', async (req, res) => {
         strict: false, 
         collection: collection,
         timestamps: true 
-      }));
+      }), 'axiom'); // Explicitly use 'axiom' database
     
     const items = await DynamicModel.find({});
     console.log('📊 Found', items.length, 'items');
