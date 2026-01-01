@@ -7,6 +7,7 @@ import { Router } from 'express';
 import {Project} from '../models/Project.js';
 import {auth} from '../middleware/auth.js';
 import express from 'express';
+import mongoose from 'mongoose';
 const router = Router();
 
 // Add API endpoint to project (Phase 2)
@@ -14,21 +15,61 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
     const newEndpoint = {
       id: `api_${Date.now()}`,
+      name: req.body.name,
       method: req.body.method,
       path: req.body.path,
       description: req.body.description,
+      purpose: req.body.purpose,
       auth: req.body.auth || false,
+      collection: req.body.collection,
+      fields: req.body.fields || [],
+      createCollection: req.body.createCollection || false,
+      requestExample: req.body.requestExample,
+      responseExample: req.body.responseExample,
       controller: req.body.controller,
       model: req.body.model
     };
 
+    // Create collection if requested
+    if (newEndpoint.createCollection && newEndpoint.collection) {
+      try {
+        // Check if collection already exists
+        const collections = await mongoose.connection.db.listCollections().toArray();
+        const collectionExists = collections.some(col => col.name === newEndpoint.collection);
+        
+        if (!collectionExists) {
+          // Create the collection by inserting a dummy document and then removing it
+          const DynamicModel = mongoose.model(newEndpoint.collection, new mongoose.Schema({}, { 
+            strict: false, 
+            collection: newEndpoint.collection,
+            timestamps: true 
+          }), 'axiom');
+          
+          // Create a dummy document to initialize the collection
+          await DynamicModel.create({ _init: true });
+          await DynamicModel.deleteMany({ _init: true });
+          
+          console.log(`✅ Created collection: ${newEndpoint.collection}`);
+        }
+      } catch (collectionError) {
+        console.error('❌ Error creating collection:', collectionError);
+        return res.status(500).json({ error: 'Failed to create collection: ' + collectionError.message });
+      }
+    }
+
     project.apis.push(newEndpoint);
     await project.save();
 
+    console.log(`✅ Created API endpoint: ${newEndpoint.method} ${newEndpoint.path}`);
     res.status(201).json(newEndpoint);
   } catch (error) {
+    console.error('❌ Error creating API endpoint:', error);
     res.status(500).json({ error: error.message });
   }
 });

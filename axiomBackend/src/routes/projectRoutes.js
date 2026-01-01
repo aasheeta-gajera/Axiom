@@ -6,7 +6,6 @@
 import { Router } from 'express';
 import { Project } from '../models/Project.js';
 import { auth } from '../middleware/auth.js';
-import express from 'express';
 const router = Router();
 
 // Create project
