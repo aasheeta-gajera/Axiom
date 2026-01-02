@@ -33,7 +33,18 @@ router.post('/', auth, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     console.log('🔍 Loading projects for user:', req.userId);
-    const projects = await Project.find({ owner: req.userId });
+    const returnAll = String(req.query.all || '').toLowerCase() === 'true';
+
+    const query = returnAll
+      ? {}
+      : {
+          $or: [
+            { owner: req.userId },
+            { 'collaborators.user': req.userId }
+          ]
+        };
+
+    const projects = await Project.find(query);
     console.log('📊 Found projects:', projects.length);
     res.json(projects);
   } catch (error) {

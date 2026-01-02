@@ -11,7 +11,7 @@ class ProjectService {
     await _authService.loadToken();
 
     final response = await http.get(
-      Uri.parse('$baseUrl/projects'),
+      Uri.parse('$baseUrl/projects?all=true'),
       headers: _authService.getAuthHeaders(),
     );
 
