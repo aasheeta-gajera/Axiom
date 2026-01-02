@@ -119,6 +119,8 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
 
       if (projectId == null) return;
 
+      await authService.loadToken();
+
       final response = await http.post(
         Uri.parse('https://axiom-mmd4.onrender.com/api/apis/$projectId/endpoints'),
         headers: {
@@ -129,10 +131,17 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
       );
 
       if (response.statusCode == 201) {
+        await projectProvider.loadProject(projectId);
         await _loadAPIs();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('✅ API created successfully')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('❌ Failed (${response.statusCode}): ${response.body}')),
           );
         }
       }
@@ -157,6 +166,8 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
 
       if (projectId == null) return;
 
+      await authService.loadToken();
+
       final response = await http.put(
         Uri.parse('https://axiom-mmd4.onrender.com/api/apis/$projectId/endpoints/${api.id}'),
         headers: {
@@ -167,10 +178,17 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
       );
 
       if (response.statusCode == 200) {
+        await projectProvider.loadProject(projectId);
         await _loadAPIs();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('✅ API updated successfully')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('❌ Failed (${response.statusCode}): ${response.body}')),
           );
         }
       }

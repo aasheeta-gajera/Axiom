@@ -53,12 +53,12 @@ const apiEndpointSchema = new mongoose.Schema({
     type: String,
     required: Boolean,
     unique: Boolean,
-    default: mongoose.Schema.Types.Mixed,
+    defaultValue: mongoose.Schema.Types.Mixed,
     validation: String
   }],
   createCollection: { type: Boolean, default: false },
-  requestExample: String,
-  responseExample: String,
+  requestExample: mongoose.Schema.Types.Mixed,
+  responseExample: mongoose.Schema.Types.Mixed,
   controller: String,
   model: String
 }, { _id: false });
