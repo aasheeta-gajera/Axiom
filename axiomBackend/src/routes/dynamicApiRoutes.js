@@ -48,7 +48,7 @@ function validateRequestData(data, fields, purpose) {
 // Main dynamic API handler - processes requests based on stored API configurations
 router.use(async (req, res, next) => {
   try {
-    const path = req.path.split('?')[0].replace(/\/$/, '') || '/';
+    const path = req.path; // Keep the leading slash for matching
     const method = req.method.toUpperCase();
     
     console.log(`🔥 Dynamic API Request: ${method} ${path}`);
@@ -56,16 +56,12 @@ router.use(async (req, res, next) => {
     
     // Find project that contains this API endpoint
     const projects = await Project.find({
-      'apis': {
-        $elemMatch: {
-          'path': path,
-          'method': method
-        }
-      }
+      'apis.path': path,
+      'apis.method': method
     });
     
     console.log(`🔍 Found ${projects.length} projects with matching API`);
-
+    
     if (projects.length === 0) {
       return next(); // Pass to next route handler
     }

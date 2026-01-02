@@ -40,6 +40,8 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
         const collectionExists = collections.some(col => col.name === newEndpoint.collection);
         
         if (!collectionExists) {
+          console.log(` Creating new collection: ${newEndpoint.collection}`);
+          
           // Create the collection by inserting a dummy document and then removing it
           const DynamicModel = mongoose.model(newEndpoint.collection, new mongoose.Schema({}, { 
             strict: false, 
@@ -51,10 +53,20 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
           await DynamicModel.create({ _init: true });
           await DynamicModel.deleteMany({ _init: true });
           
-          console.log(`✅ Created collection: ${newEndpoint.collection}`);
+          console.log(` Successfully created collection: ${newEndpoint.collection}`);
+          
+          // Verify collection was created
+          const newCollections = await mongoose.connection.db.listCollections().toArray();
+          const wasCreated = newCollections.some(col => col.name === newEndpoint.collection);
+          
+          if (!wasCreated) {
+            throw new Error('Collection creation verification failed');
+          }
+        } else {
+          console.log(` Collection ${newEndpoint.collection} already exists`);
         }
       } catch (collectionError) {
-        console.error('❌ Error creating collection:', collectionError);
+        console.error(' Error creating collection:', collectionError);
         return res.status(500).json({ error: 'Failed to create collection: ' + collectionError.message });
       }
     }
@@ -62,7 +74,7 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
     project.apis.push(newEndpoint);
     await project.save();
 
-    console.log(`✅ Created API endpoint: ${newEndpoint.method} ${newEndpoint.path}`);
+    console.log(` Created API endpoint: ${newEndpoint.method} ${newEndpoint.path}`);
     res.status(201).json(newEndpoint);
   } catch (error) {
     console.error('❌ Error creating API endpoint:', error);
