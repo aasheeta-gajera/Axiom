@@ -24,9 +24,9 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
   }
 
   void _initializeControllers() {
-    for (var widget in widget.screen.widgets) {
-      if (widget.type == 'TextField' || widget.type == 'TextFormField') {
-        _controllers[widget.id] = TextEditingController();
+    for (var w in widget.screen.widgets) {
+      if (w.type == 'TextField' || w.type == 'TextFormField') {
+        _controllers[w.id] = TextEditingController();
       }
     }
   }
@@ -51,6 +51,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
               for (var controller in _controllers.values) {
                 controller.clear();
               }
+              _formData.clear();
             }),
           ),
         ],
@@ -61,24 +62,26 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
     );
   }
 
-  Widget _buildInteractiveWidget(WidgetModel widget) {
+  // ✅ FIXED: Renamed parameter from 'widget' to 'widgetModel'
+  Widget _buildInteractiveWidget(WidgetModel widgetModel) {
     return Positioned(
-      left: widget.position.dx,
-      top: widget.position.dy,
-      child: _renderInteractiveWidget(widget),
+      left: widgetModel.position.dx,
+      top: widgetModel.position.dy,
+      child: _renderInteractiveWidget(widgetModel),
     );
   }
 
-  Widget _renderInteractiveWidget(WidgetModel widget) {
-    final props = widget.properties;
+  // ✅ FIXED: Renamed parameter from 'widget' to 'widgetModel'
+  Widget _renderInteractiveWidget(WidgetModel widgetModel) {
+    final props = widgetModel.properties;
 
-    switch (widget.type) {
+    switch (widgetModel.type) {
       case 'TextField':
       case 'TextFormField':
         return SizedBox(
           width: (props['width'] ?? 250).toDouble(),
           child: TextField(
-            controller: _controllers[widget.id],
+            controller: _controllers[widgetModel.id],
             decoration: InputDecoration(
               hintText: props['hint'] ?? '',
               labelText: props['label'] ?? '',
@@ -86,8 +89,12 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
             ),
             obscureText: props['obscureText'] ?? false,
             onChanged: (value) {
-              if (widget.bindToField != null) {
-                _formData[widget.bindToField!] = value;
+              // ✅ FIXED: Now using widgetModel instead of widget
+              final fieldKey = props['fieldKey'] ?? widgetModel.id;
+              _formData[fieldKey] = value;
+
+              if (widgetModel.bindToField != null) {
+                _formData[widgetModel.bindToField!] = value;
               }
             },
           ),
@@ -95,8 +102,8 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
 
       case 'Button':
         return ElevatedButton(
-          onPressed: widget.onClick != null
-              ? () => _handleEvent(widget.onClick!)
+          onPressed: widgetModel.onClick != null
+              ? () => _handleEvent(widgetModel.onClick!)
               : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: _parseColor(props['backgroundColor'] ?? '#2196F3'),
@@ -113,11 +120,50 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
           ),
         );
 
+      case 'Container':
+        return Container(
+          width: (props['width'] ?? 200).toDouble(),
+          height: (props['height'] ?? 100).toDouble(),
+          decoration: BoxDecoration(
+            color: _parseColor(props['backgroundColor'] ?? '#E3F2FD'),
+            borderRadius: BorderRadius.circular((props['borderRadius'] ?? 8).toDouble()),
+          ),
+          child: Center(
+            child: Text(
+              'Container',
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
+          ),
+        );
+
+      case 'Image':
+        return Image.network(
+          props['image'] ?? 'https://via.placeholder.com/200',
+          width: (props['width'] ?? 200).toDouble(),
+          height: (props['height'] ?? 200).toDouble(),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              width: (props['width'] ?? 200).toDouble(),
+              height: (props['height'] ?? 200).toDouble(),
+              color: Colors.grey.shade300,
+              child: const Icon(Icons.broken_image, size: 48),
+            );
+          },
+        );
+
       default:
         return Container(
           padding: const EdgeInsets.all(8),
-          color: Colors.grey.shade300,
-          child: Text(widget.type),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            border: Border.all(color: Colors.grey.shade400),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            widgetModel.type,
+            style: const TextStyle(fontSize: 12),
+          ),
         );
     }
   }
@@ -130,78 +176,230 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
       case 'navigate':
         _navigate(event);
         break;
+      case 'validate':
+        _validateForm();
+        break;
     }
   }
 
+  // ✅ COMPLETE API CALL HANDLER
   Future<void> _callAPI(EventBinding event) async {
-    // Collect data from mapped fields
+    // Collect data using field mapping
     final requestData = <String, dynamic>{};
-    event.fieldMapping?.forEach((apiField, widgetId) {
-      final controller = _controllers[widgetId];
-      if (controller != null) {
-        requestData[apiField] = controller.text;
+
+    if (event.fieldMapping != null && event.fieldMapping!.isNotEmpty) {
+      // Use field mapping: API field name -> widget ID
+      event.fieldMapping!.forEach((apiFieldName, widgetId) {
+        final widgetModel = widget.screen.widgets.firstWhere(
+              (w) => w.id == widgetId,
+          orElse: () => widget.screen.widgets.first,
+        );
+        final fieldKey = widgetModel.properties['fieldKey'] ?? widgetId;
+
+        // Get value from form data
+        if (_formData.containsKey(fieldKey)) {
+          requestData[apiFieldName] = _formData[fieldKey];
+        } else if (_controllers.containsKey(widgetId)) {
+          requestData[apiFieldName] = _controllers[widgetId]!.text;
+        }
+      });
+    } else {
+      // No mapping: use all form data
+      requestData.addAll(_formData);
+    }
+
+    // Validate required fields
+    if (requestData.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Please fill in the form'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
-    });
+      return;
+    }
 
     // Show loading
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🔄 Calling API...')),
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 12),
+              Text('🔄 Calling API...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+        ),
       );
     }
 
     try {
-      final url = 'https://axiom-mmd4.onrender.com/api${event.apiPath}';
+      // Ensure path starts with /
+      String apiPath = event.apiPath ?? '';
+      if (!apiPath.startsWith('/')) {
+        apiPath = '/$apiPath';
+      }
+
+      // Build correct URL
+      final url = 'https://axiom-mmd4.onrender.com/api$apiPath';
+
+      print('🚀 API Call Details:');
+      print('   Method: ${event.apiMethod}');
+      print('   URL: $url');
+      print('   Data: $requestData');
 
       http.Response response;
+
       switch (event.apiMethod?.toUpperCase()) {
         case 'POST':
           response = await http.post(
             Uri.parse(url),
             headers: {'Content-Type': 'application/json'},
             body: json.encode(requestData),
-          );
+          ).timeout(const Duration(seconds: 10));
           break;
+
         case 'GET':
-          response = await http.get(Uri.parse(url));
+          final uri = Uri.parse(url).replace(
+            queryParameters: requestData.map((k, v) => MapEntry(k, v.toString())),
+          );
+          response = await http.get(uri).timeout(const Duration(seconds: 10));
           break;
+
         case 'PUT':
           response = await http.put(
             Uri.parse(url),
             headers: {'Content-Type': 'application/json'},
             body: json.encode(requestData),
-          );
+          ).timeout(const Duration(seconds: 10));
           break;
+
         case 'DELETE':
-          response = await http.delete(Uri.parse(url));
+          response = await http.delete(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(requestData),
+          ).timeout(const Duration(seconds: 10));
           break;
+
         default:
-          throw Exception('Unsupported method');
+          throw Exception('Unsupported HTTP method: ${event.apiMethod}');
       }
+
+      print('📥 Response Status: ${response.statusCode}');
+      print('📥 Response Body: ${response.body}');
 
       if (mounted) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Success!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
+          // Success
+          final responseData = json.decode(response.body);
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('❌ Error: ${response.statusCode}'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('✅ Success!', style: TextStyle(fontWeight: FontWeight.bold)),
+                  if (responseData['message'] != null)
+                    Text(responseData['message']),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'View',
+                textColor: Colors.white,
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Response Data'),
+                      content: SingleChildScrollView(
+                        child: Text(
+                          const JsonEncoder.withIndent('  ').convert(responseData),
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+
+          // Clear form on success
+          for (var controller in _controllers.values) {
+            controller.clear();
+          }
+          _formData.clear();
+
+        } else {
+          // Error response
+          String errorMessage = 'Error ${response.statusCode}';
+          try {
+            final errorData = json.decode(response.body);
+            errorMessage = errorData['error'] ?? errorData['message'] ?? errorMessage;
+          } catch (e) {
+            errorMessage = response.body;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('❌ Failed (${response.statusCode})',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(errorMessage),
+                ],
+              ),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
       }
     } catch (e) {
+      print('❌ API Call Error: $e');
+
       if (mounted) {
+        String errorMessage = 'Network error';
+        if (e.toString().contains('TimeoutException')) {
+          errorMessage = 'Request timeout - server not responding';
+        } else if (e.toString().contains('SocketException')) {
+          errorMessage = 'No internet connection';
+        } else {
+          errorMessage = e.toString().replaceAll('Exception: ', '');
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Error: $e'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('❌ Error', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(errorMessage),
+              ],
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -209,8 +407,21 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
   }
 
   void _navigate(EventBinding event) {
-    // Implement navigation
     print('Navigate to: ${event.navigateTo}');
+    // TODO: Implement screen navigation
+  }
+
+  void _validateForm() {
+    bool isValid = _formData.isNotEmpty;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isValid ? '✅ Form is valid' : '❌ Please fill all fields'),
+          backgroundColor: isValid ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 
   Color _parseColor(String hex) {

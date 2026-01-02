@@ -141,7 +141,7 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
           controller: _nameController,
           decoration: const InputDecoration(
             labelText: 'API Name *',
-            hintText: 'e.g., Login API, Create User',
+            hintText: 'e.g., Register User, Login',
             border: OutlineInputBorder(),
           ),
         ),
@@ -195,12 +195,33 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
               flex: 2,
               child: TextField(
                 controller: _pathController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Path *',
-                  hintText: '/users/login',
-                  border: OutlineInputBorder(),
-                  prefixText: '/api',
+                  hintText: '/register',
+                  border: const OutlineInputBorder(),
+                  helperText: 'Will be: /api${_pathController.text}',
+                  helperStyle: const TextStyle(fontSize: 11),
                 ),
+                // ✅ FIX: Auto-format path
+                onChanged: (value) {
+                  String formatted = value.trim();
+                  // Ensure starts with /
+                  if (formatted.isNotEmpty && !formatted.startsWith('/')) {
+                    formatted = '/$formatted';
+                  }
+                  // Remove any /api prefix if user added it
+                  if (formatted.startsWith('/api/')) {
+                    formatted = formatted.substring(4);
+                  }
+                  // Update controller if changed
+                  if (formatted != value) {
+                    _pathController.value = TextEditingValue(
+                      text: formatted,
+                      selection: TextSelection.collapsed(offset: formatted.length),
+                    );
+                  }
+                  setState(() {}); // Update helper text
+                },
               ),
             ),
           ],
@@ -459,8 +480,9 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
     switch (_purpose) {
       case 'login':
         _method = 'POST';
-        _pathController.text = '/auth/login';
+        _pathController.text = '/login';
         _requiresAuth = false;
+        _collectionName = 'users';
         _fields = [
           ApiField(name: 'email', type: 'String', required: true, validation: 'email'),
           ApiField(name: 'password', type: 'String', required: true),
@@ -468,8 +490,9 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
         break;
       case 'register':
         _method = 'POST';
-        _pathController.text = '/auth/register';
+        _pathController.text = '/register';
         _requiresAuth = false;
+        _collectionName = 'users';
         _fields = [
           ApiField(name: 'name', type: 'String', required: true),
           ApiField(name: 'email', type: 'String', required: true, unique: true, validation: 'email'),
@@ -478,22 +501,27 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
         break;
       case 'create':
         _method = 'POST';
+        _pathController.text = '/create';
         _requiresAuth = true;
         break;
       case 'read':
         _method = 'GET';
+        _pathController.text = '/data';
         _requiresAuth = false;
         break;
       case 'update':
         _method = 'PUT';
+        _pathController.text = '/update';
         _requiresAuth = true;
         break;
       case 'delete':
         _method = 'DELETE';
+        _pathController.text = '/delete';
         _requiresAuth = true;
         break;
       case 'list':
         _method = 'GET';
+        _pathController.text = '/list';
         _requiresAuth = false;
         break;
     }
@@ -529,25 +557,61 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
       'data': _requestExample,
     };
   }
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
   bool _validateStep(int step) {
     switch (step) {
       case 0:
-        if (_nameController.text.isEmpty || _pathController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please fill all required fields')),
-          );
+      // ✅ FIX: Validate path format
+        String path = _pathController.text.trim();
+
+        if (_nameController.text.isEmpty) {
+          _showError('Please enter API name');
           return false;
         }
+
+        if (path.isEmpty) {
+          _showError('Please enter API path');
+          return false;
+        }
+
+        if (!path.startsWith('/')) {
+          _showError('Path must start with /');
+          return false;
+        }
+
+        if (path.contains(' ')) {
+          _showError('Path cannot contain spaces');
+          return false;
+        }
+
         return true;
+
       case 1:
-        if (_collectionName.isEmpty || _fields.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please configure database and add fields')),
-          );
+        if (_collectionName.isEmpty) {
+          _showError('Please enter collection name');
           return false;
         }
+
+        if (_collectionName.contains(' ')) {
+          _showError('Collection name cannot contain spaces');
+          return false;
+        }
+
+        if (_fields.isEmpty) {
+          _showError('Please add at least one field');
+          return false;
+        }
+
         return true;
+
       default:
         return true;
     }
