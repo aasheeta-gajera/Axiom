@@ -53,6 +53,8 @@ router.use(async (req, res, next) => {
     
     console.log(`🔥 Dynamic API Request: ${method} ${path}`);
     console.log('📝 Request body:', req.body);
+    console.log('🔍 Full URL:', req.originalUrl);
+    console.log('🔍 Base URL:', req.baseUrl);
     
     // Find project that contains this API endpoint
     const projects = await Project.find({
@@ -62,7 +64,17 @@ router.use(async (req, res, next) => {
     
     console.log(`🔍 Found ${projects.length} projects with matching API`);
     
+    // Debug: Show all available APIs in all projects
+    const allProjects = await Project.find({});
+    console.log('📋 All available APIs:');
+    allProjects.forEach(proj => {
+      proj.apis.forEach(api => {
+        console.log(`  - ${api.method} ${api.path} (Project: ${proj.name})`);
+      });
+    });
+    
     if (projects.length === 0) {
+      console.log(`❌ No matching API found for ${method} ${path}`);
       return next(); // Pass to next route handler
     }
     
@@ -80,6 +92,7 @@ router.use(async (req, res, next) => {
     }
     
     if (!apiConfig) {
+      console.log(`❌ API config not found for ${method} ${path}`);
       return next(); // Pass to next route handler
     }
     

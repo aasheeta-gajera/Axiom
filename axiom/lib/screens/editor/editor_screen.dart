@@ -18,27 +18,28 @@ class EditorScreen extends StatefulWidget {
 class _EditorScreenState extends State<EditorScreen> {
   final bool _showPalette = true;
   final bool _showProperties = true;
+  late WebSocketService _wsService; // Store reference
 
   @override
   void initState() {
     super.initState();
 
-    // ✅ ADD THIS
-    final wsService = context.read<WebSocketService>();
-    wsService.connect();
+    // Store WebSocket service reference
+    _wsService = context.read<WebSocketService>();
+    _wsService.connect();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final projectId = ModalRoute.of(context)?.settings.arguments as String?;
       if (projectId != null) {
         context.read<ProjectProvider>().loadProject(projectId);
-        wsService.joinProject(projectId); // ✅ Join project room
+        _wsService.joinProject(projectId); // Join project room
       }
     });
   }
 
   @override
   void dispose() {
-    context.read<WebSocketService>().disconnect(); // ✅ Clean up
+    _wsService.disconnect(); // Use stored reference instead of context.read
     super.dispose();
   }
 
