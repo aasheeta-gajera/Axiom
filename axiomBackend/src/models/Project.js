@@ -34,7 +34,18 @@ children: [{
   },
   parent: String
 }, { _id: false });
-
+const apiFieldSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  type: { 
+    type: String, 
+    required: true,
+    enum: ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'Array', 'Object', 'Mixed']
+  },
+  required: { type: Boolean, default: false },
+  unique: { type: Boolean, default: false },
+  defaultValue: { type: mongoose.Schema.Types.Mixed, default: null },
+  validation: { type: mongoose.Schema.Types.Mixed, default: null }
+}, { _id: false });
 const apiEndpointSchema = new mongoose.Schema({
   id: { type: String, required: true },
   name: { type: String, required: true },
@@ -47,15 +58,8 @@ const apiEndpointSchema = new mongoose.Schema({
   description: String,
   purpose: String,
   auth: { type: Boolean, default: false },
-  collection: String,
-  fields: [{
-    name: String,
-    type: String,
-    required: Boolean,
-    unique: Boolean,
-    defaultValue: mongoose.Schema.Types.Mixed,
-    validation: String
-  }],
+  collectionName: { type: String }, 
+  fields: [apiFieldSchema],
   createCollection: { type: Boolean, default: false },
   requestExample: mongoose.Schema.Types.Mixed,
   responseExample: mongoose.Schema.Types.Mixed,

@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 const router = Router();
 
 // Add API endpoint to project (Phase 2)
+// In apiRoutes.js, update the endpoint creation
 router.post('/:projectId/endpoints', auth, async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
@@ -14,6 +15,16 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
+
+    // Validate fields if they exist
+    const fields = (req.body.fields || []).map(field => ({
+      name: field.name,
+      type: field.type || 'String',
+      required: field.required || false,
+      unique: field.unique || false,
+      defaultValue: field.defaultValue || null,
+      validation: field.validation || null
+    }));
 
     const newEndpoint = {
       id: `api_${Date.now()}`,
@@ -23,8 +34,8 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
       description: req.body.description,
       purpose: req.body.purpose,
       auth: req.body.auth || false,
-      collection: req.body.collection,
-      fields: req.body.fields || [],
+      collectionName: req.body.collectionName, // Changed from collection to collectionName
+      fields: fields,
       createCollection: req.body.createCollection || false,
       requestExample: req.body.requestExample,
       responseExample: req.body.responseExample,
@@ -32,51 +43,17 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
       model: req.body.model
     };
 
-    // Create collection if requested
-    if (newEndpoint.createCollection && newEndpoint.collection) {
-      try {
-        console.log(` Attempting to create collection: ${newEndpoint.collection}`);
-        
-        // Check if collection already exists
-        const collections = await mongoose.connection.db.listCollections().toArray();
-        const collectionExists = collections.some(col => col.name === newEndpoint.collection);
-        
-        if (!collectionExists) {
-          console.log(` Collection ${newEndpoint.collection} does not exist, creating now...`);
-          
-          // Create collection directly using MongoDB driver
-          await mongoose.connection.db.createCollection(newEndpoint.collection);
-          
-          console.log(` Successfully created collection: ${newEndpoint.collection}`);
-          
-          // Verify collection was created
-          const newCollections = await mongoose.connection.db.listCollections().toArray();
-          const wasCreated = newCollections.some(col => col.name === newEndpoint.collection);
-          
-          if (!wasCreated) {
-            console.log(` Verification failed - collection not found after creation`);
-            throw new Error('Collection creation verification failed');
-          }
-          
-          console.log(` Verification passed - collection ${newEndpoint.collection} is ready`);
-        } else {
-          console.log(` Collection ${newEndpoint.collection} already exists`);
-        }
-      } catch (collectionError) {
-        console.error(' Error creating collection:', collectionError);
-        console.error(' Full error details:', collectionError.stack);
-        return res.status(500).json({ error: 'Failed to create collection: ' + collectionError.message });
-      }
-    }
-
+    // Rest of the code remains the same...
     project.apis.push(newEndpoint);
     await project.save();
 
-    console.log(` Created API endpoint: ${newEndpoint.method} ${newEndpoint.path}`);
     res.status(201).json(newEndpoint);
   } catch (error) {
-    console.error('❌ Error creating API endpoint:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error creating API endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to create API endpoint',
+      details: error.message 
+    });
   }
 });
 
