@@ -101,7 +101,7 @@ router.put('/:projectId/endpoints/:endpointId', auth, async (req, res) => {
     Object.assign(project.apis[endpointIndex], req.body);
     await project.save();
 
-    res.json(endpoint);
+    res.json(project.apis[endpointIndex]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

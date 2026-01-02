@@ -23,6 +23,16 @@ function getDynamicModel(collectionName) {
   return mongoose.model(collectionName, schema);
 }
 
+function normalizeApiPath(value) {
+  if (!value || typeof value !== 'string') return '/';
+  let p = value.trim();
+  if (!p.startsWith('/')) p = `/${p}`;
+  if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+  if (p.startsWith('/api/')) p = p.slice(4);
+  if (p === '/api') p = '/';
+  return p;
+}
+
 // Helper function to validate request data against API fields
 function validateRequestData(data, fields, purpose) {
   const errors = [];
@@ -50,6 +60,16 @@ router.use(async (req, res, next) => {
   try {
     const path = req.path; // Keep the leading slash for matching
     const method = req.method.toUpperCase();
+    const normalizedRequestPath = normalizeApiPath(path);
+    const candidatePaths = Array.from(
+      new Set([
+        path,
+        normalizedRequestPath,
+        normalizedRequestPath.replace(/^\//, ''),
+        `/api${normalizedRequestPath}`,
+        `api${normalizedRequestPath}`
+      ])
+    );
     
     console.log(`🔥 Dynamic API Request: ${method} ${path}`);
     console.log('📝 Request body:', req.body);
@@ -58,8 +78,8 @@ router.use(async (req, res, next) => {
     
     // Find project that contains this API endpoint
     const projects = await Project.find({
-      'apis.path': path,
-      'apis.method': method
+      'apis.method': method,
+      'apis.path': { $in: candidatePaths }
     });
     
     console.log(`🔍 Found ${projects.length} projects with matching API`);
@@ -83,7 +103,10 @@ router.use(async (req, res, next) => {
     let project = null;
     
     for (const proj of projects) {
-      const api = proj.apis.find(api => api.path === path && api.method === method);
+      const api = proj.apis.find(api => {
+        if (api.method !== method) return false;
+        return normalizeApiPath(api.path) === normalizedRequestPath;
+      });
       if (api) {
         apiConfig = api;
         project = proj;
