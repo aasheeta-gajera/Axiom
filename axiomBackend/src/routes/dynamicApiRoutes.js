@@ -20,7 +20,7 @@ function getDynamicModel(collectionName) {
     timestamps: true 
   });
   
-  return mongoose.model(collectionName, schema, 'axiom');
+  return mongoose.model(collectionName, schema);
 }
 
 // Helper function to validate request data against API fields
@@ -48,7 +48,7 @@ function validateRequestData(data, fields, purpose) {
 // Main dynamic API handler - processes requests based on stored API configurations
 router.use(async (req, res, next) => {
   try {
-    const path = req.path; // Keep the leading slash for matching
+    const path = req.path.split('?')[0].replace(/\/$/, '') || '/';
     const method = req.method.toUpperCase();
     
     console.log(`🔥 Dynamic API Request: ${method} ${path}`);
@@ -56,10 +56,16 @@ router.use(async (req, res, next) => {
     
     // Find project that contains this API endpoint
     const projects = await Project.find({
-      'apis.path': path,
-      'apis.method': method
+      'apis': {
+        $elemMatch: {
+          'path': path,
+          'method': method
+        }
+      }
     });
     
+    console.log(`🔍 Found ${projects.length} projects with matching API`);
+
     if (projects.length === 0) {
       return next(); // Pass to next route handler
     }
@@ -105,7 +111,7 @@ router.use(async (req, res, next) => {
     let result;
     switch (method) {
       case 'GET':
-        if (req.params.id || path.includes('/')) {
+        if (req.params.id || path.includes('/') && path.split('/').length > 2) {
           // Get single item by ID (for paths like /users/:id)
           const id = req.params.id || path.split('/').pop();
           result = await DynamicModel.findById(id);
@@ -120,7 +126,8 @@ router.use(async (req, res, next) => {
         
       case 'POST':
         // Validate request data
-        const validationErrors = validateRequestData(req.body, apiConfig.fields || [], apiConfig.purpose);
+         const postData = req.body.data || req.body;
+        const validationErrors = validateRequestData(postData, apiConfig.fields || [], apiConfig.purpose);
         if (validationErrors.length > 0) {
           return res.status(400).json({ 
             error: 'Validation failed', 
@@ -130,15 +137,15 @@ router.use(async (req, res, next) => {
         
         // Handle special purposes
         if (apiConfig.purpose === 'register') {
-          const existingUser = await DynamicModel.findOne({ email: req.body.email });
+          const existingUser = await DynamicModel.findOne({ email: postData.email });
           if (existingUser) {
             return res.status(400).json({ error: 'User already exists' });
           }
         }
         
         if (apiConfig.purpose === 'login') {
-          const user = await DynamicModel.findOne({ email: req.body.email });
-          if (!user || user.password !== req.body.password) { // Note: In production, use proper password hashing
+          const user = await DynamicModel.findOne({ email: postData.email });
+          if (!user || user.password !== postData.password) { // Note: In production, use proper password hashing
             return res.status(401).json({ error: 'Invalid credentials' });
           }
           
@@ -161,7 +168,7 @@ router.use(async (req, res, next) => {
         }
         
         // Create new item
-        result = new DynamicModel(req.body);
+        result = new DynamicModel(postData);
         await result.save();
         break;
         
@@ -171,9 +178,10 @@ router.use(async (req, res, next) => {
           return res.status(400).json({ error: 'ID required for update' });
         }
         
+         const updateData = req.body.data || req.body;
         result = await DynamicModel.findByIdAndUpdate(
           updateId, 
-          req.body, 
+          updateData, 
           { new: true, runValidators: true }
         );
         
@@ -195,7 +203,8 @@ router.use(async (req, res, next) => {
         
         return res.json({
           success: true,
-          message: 'Item deleted successfully'
+          message: 'Item deleted successfully',
+           data: result
         });
         
       default:
@@ -215,9 +224,23 @@ router.use(async (req, res, next) => {
     
   } catch (error) {
     console.error('❌ Dynamic API Error:', error);
+   if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        error: 'Validation error',
+        details: Object.values(error.errors).map(e => e.message)
+      });
+    }
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({ 
+        error: 'Invalid ID format'
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error.message,
+      type: error.name
     });
   }
 });
@@ -239,7 +262,11 @@ function getSuccessMessage(purpose, method) {
       return 'Data deleted successfully';
     case 'list':
       return 'Data listed successfully';
-    default:
+   default:
+      if (method === 'POST') return 'Data created successfully';
+      if (method === 'GET') return 'Data retrieved successfully';
+      if (method === 'PUT') return 'Data updated successfully';
+      if (method === 'DELETE') return 'Data deleted successfully';
       return 'Operation successful';
   }
 }

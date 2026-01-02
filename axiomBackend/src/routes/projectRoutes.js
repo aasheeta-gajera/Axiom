@@ -33,7 +33,7 @@ router.post('/', auth, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     console.log('🔍 Loading projects for user:', req.userId);
-    const projects = await Project.find();
+    const projects = await Project.find({ owner: req.userId });
     console.log('📊 Found projects:', projects.length);
     res.json(projects);
   } catch (error) {
@@ -43,17 +43,17 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get single project
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-    res.json(project);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// router.get('/:id', auth, async (req, res) => {
+//   try {
+//     const project = await Project.findById(req.params.id);
+//     if (!project) {
+//       return res.status(404).json({ error: 'Project not found' });
+//     }
+//     res.json(project);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 // Update project
 router.put('/:id', auth, async (req, res) => {
