@@ -35,23 +35,17 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
     // Create collection if requested
     if (newEndpoint.createCollection && newEndpoint.collection) {
       try {
+        console.log(` Attempting to create collection: ${newEndpoint.collection}`);
+        
         // Check if collection already exists
         const collections = await mongoose.connection.db.listCollections().toArray();
         const collectionExists = collections.some(col => col.name === newEndpoint.collection);
         
         if (!collectionExists) {
-          console.log(` Creating new collection: ${newEndpoint.collection}`);
+          console.log(` Collection ${newEndpoint.collection} does not exist, creating now...`);
           
-          // Create the collection by inserting a dummy document and then removing it
-          const DynamicModel = mongoose.model(newEndpoint.collection, new mongoose.Schema({}, { 
-            strict: false, 
-            collection: newEndpoint.collection,
-            timestamps: true 
-          }), 'axiom');
-          
-          // Create a dummy document to initialize the collection
-          await DynamicModel.create({ _init: true });
-          await DynamicModel.deleteMany({ _init: true });
+          // Create collection directly using MongoDB driver
+          await mongoose.connection.db.createCollection(newEndpoint.collection);
           
           console.log(` Successfully created collection: ${newEndpoint.collection}`);
           
@@ -60,13 +54,17 @@ router.post('/:projectId/endpoints', auth, async (req, res) => {
           const wasCreated = newCollections.some(col => col.name === newEndpoint.collection);
           
           if (!wasCreated) {
+            console.log(` Verification failed - collection not found after creation`);
             throw new Error('Collection creation verification failed');
           }
+          
+          console.log(` Verification passed - collection ${newEndpoint.collection} is ready`);
         } else {
           console.log(` Collection ${newEndpoint.collection} already exists`);
         }
       } catch (collectionError) {
         console.error(' Error creating collection:', collectionError);
+        console.error(' Full error details:', collectionError.stack);
         return res.status(500).json({ error: 'Failed to create collection: ' + collectionError.message });
       }
     }
