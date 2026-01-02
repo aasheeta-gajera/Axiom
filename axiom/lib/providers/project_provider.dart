@@ -21,10 +21,13 @@ class ProjectProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      print('🔄 Loading projects...');
       _projects = await _projectService.getProjects();
+      print('✅ Loaded ${_projects.length} projects');
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      print('❌ Failed to load projects: $e');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -113,5 +116,28 @@ class ProjectProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+  Future<void> createOrUpdateAPI(ApiEndpoint api) async {
+    if (_currentProject == null) return;
+
+    try {
+      final index = _currentProject!.apis.indexWhere((a) => a.id == api.id);
+      if (index != -1) {
+        _currentProject!.apis[index] = api;
+      } else {
+        _currentProject!.apis.add(api);
+      }
+
+      // Add collection if new
+      if (api.createCollection && !_currentProject!.collections.contains(api.collection)) {
+        _currentProject!.collections.add(api.collection);
+      }
+
+      await _projectService.updateProject(_currentProject!);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 }

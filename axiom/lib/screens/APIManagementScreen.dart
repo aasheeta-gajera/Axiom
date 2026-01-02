@@ -1,15 +1,16 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/project_provider.dart';
 import '../../models/widget_model.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 import '../services/auth_service.dart';
+import 'editor/widgets/api_creation_dialog.dart';
 
 class APIManagementScreen extends StatefulWidget {
   const APIManagementScreen({super.key});
-
+  
   @override
   State<APIManagementScreen> createState() => _APIManagementScreenState();
 }
@@ -87,183 +88,33 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
   }
 
   Future<void> _showAddAPIDialog() async {
-    final methodController = TextEditingController(text: 'GET');
-    final pathController = TextEditingController();
-    final descController = TextEditingController();
-    bool requiresAuth = false;
-
-    await showDialog(
+    final result = await showDialog<ApiEndpoint>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Create New API'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: methodController.text,
-                  decoration: const InputDecoration(
-                    labelText: 'HTTP Method',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['GET', 'POST', 'PUT', 'DELETE']
-                      .map((method) => DropdownMenuItem(
-                    value: method,
-                    child: Text(method),
-                  ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) methodController.text = value;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: pathController,
-                  decoration: const InputDecoration(
-                    labelText: 'Path (e.g., /users)',
-                    border: OutlineInputBorder(),
-                    prefixText: '/api',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                CheckboxListTile(
-                  title: const Text('Requires Authentication'),
-                  value: requiresAuth,
-                  onChanged: (value) {
-                    setState(() {
-                      requiresAuth = value ?? false;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (pathController.text.isNotEmpty) {
-                  await _createAPI(
-                    methodController.text,
-                    pathController.text,
-                    descController.text,
-                    requiresAuth,
-                  );
-                  if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) => const EnhancedAPICreationDialog(),
     );
+    
+    if (result != null) {
+      await _saveAPI(result);
+    }
   }
 
   Future<void> _showEditAPIDialog(ApiEndpoint endpoint) async {
-    final methodController = TextEditingController(text: endpoint.method);
-    final pathController = TextEditingController(text: endpoint.path);
-    final descController = TextEditingController(text: endpoint.description);
-    bool requiresAuth = endpoint.auth;
-
-    await showDialog(
+    final result = await showDialog<ApiEndpoint>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Edit API'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: methodController.text,
-                  decoration: const InputDecoration(
-                    labelText: 'HTTP Method',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['GET', 'POST', 'PUT', 'DELETE']
-                      .map((method) => DropdownMenuItem(
-                    value: method,
-                    child: Text(method),
-                  ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) methodController.text = value;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: pathController,
-                  decoration: const InputDecoration(
-                    labelText: 'Path',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                CheckboxListTile(
-                  title: const Text('Requires Authentication'),
-                  value: requiresAuth,
-                  onChanged: (value) {
-                    setState(() {
-                      requiresAuth = value ?? false;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await _updateAPI(
-                  endpoint.id,
-                  methodController.text,
-                  pathController.text,
-                  descController.text,
-                  requiresAuth,
-                );
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text('Update'),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) => EnhancedAPICreationDialog(existingApi: endpoint),
     );
+    
+    if (result != null) {
+      await _updateAPI(result);
+    }
   }
 
-  Future<void> _createAPI(String method, String path, String description, bool auth) async {
+  Future<void> _saveAPI(ApiEndpoint api) async {
     setState(() => _isLoading = true);
 
     try {
       final projectProvider = context.read<ProjectProvider>();
-      final authService = context.read<AuthService>(); // ✅ Get auth service
+      final authService = context.read<AuthService>();
       final projectId = projectProvider.currentProject?.id;
 
       if (projectId == null) return;
@@ -272,14 +123,9 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
         Uri.parse('https://axiom-mmd4.onrender.com/api/apis/$projectId/endpoints'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}', // ✅ Use real token
+          'Authorization': 'Bearer ${authService.token}',
         },
-        body: json.encode({
-          'method': method,
-          'path': path,
-          'description': description,
-          'auth': auth,
-        }),
+        body: json.encode(api.toJson()),
       );
 
       if (response.statusCode == 201) {
@@ -301,9 +147,42 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
     }
   }
 
-  Future<void> _updateAPI(String id, String method, String path,
-      String description, bool auth) async {
-    // Implementation similar to _createAPI
+  Future<void> _updateAPI(ApiEndpoint api) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final projectProvider = context.read<ProjectProvider>();
+      final authService = context.read<AuthService>();
+      final projectId = projectProvider.currentProject?.id;
+
+      if (projectId == null) return;
+
+      final response = await http.put(
+        Uri.parse('https://axiom-mmd4.onrender.com/api/apis/$projectId/endpoints/${api.id}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${authService.token}',
+        },
+        body: json.encode(api.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        await _loadAPIs();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ API updated successfully')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Error: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _deleteAPI(ApiEndpoint endpoint) async {

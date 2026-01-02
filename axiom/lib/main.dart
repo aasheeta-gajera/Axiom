@@ -1,9 +1,11 @@
+
 import 'package:axiom/screens/APIManagementScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/editor/editor_screen.dart';
+import 'screens/preview/preview_screen_list.dart'; // NEW
 import 'services/auth_service.dart';
 import 'services/project_service.dart';
 import 'services/websocket_service.dart';
@@ -34,28 +36,6 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
           fontFamily: 'Roboto',
-          // Better form field styling
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-          ),
-          // Better button styling
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
         ),
         initialRoute: '/login',
         routes: {
@@ -63,6 +43,7 @@ class MyApp extends StatelessWidget {
           '/dashboard': (context) => const DashboardScreen(),
           '/editor': (context) => const EditorScreen(),
           '/api-management': (context) => const APIManagementScreen(),
+          '/preview': (context) => const PreviewScreenList(),
         },
       ),
     );

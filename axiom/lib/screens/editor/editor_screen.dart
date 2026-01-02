@@ -16,8 +16,8 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
-  bool _showPalette = true;
-  bool _showProperties = true;
+  final bool _showPalette = true;
+  final bool _showProperties = true;
 
   @override
   void initState() {
@@ -56,8 +56,7 @@ class _EditorScreenState extends State<EditorScreen> {
             child: isMobile
                 ? _buildMobileLayout()
                 : isSmallScreen
-                ? _buildTabletLayout()
-                : _buildDesktopLayout(),
+                ? _buildDesktopLayout() : _buildDesktopLayout()
           ),
         ],
       ),
@@ -108,47 +107,6 @@ class _EditorScreenState extends State<EditorScreen> {
             width: 320,
             color: Colors.white,
             child: const PropertiesPanel(),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTabletLayout() {
-    return Row(
-      children: [
-        // Canvas Area (full width on tablet)
-        Expanded(
-          child: Container(
-            color: Colors.grey[200],
-            child: const CanvasArea(),
-          ),
-        ),
-
-        // Collapsible Properties Panel
-        if (_showProperties)
-          Container(
-            width: 300,
-            color: Colors.white,
-            child: Column(
-              children: [
-                Container(
-                  color: Colors.grey[100],
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Properties',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => setState(() => _showProperties = false),
-                      ),
-                    ],
-                  ),
-                ),
-                const Expanded(child: PropertiesPanel()),
-              ],
-            ),
           ),
       ],
     );

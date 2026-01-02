@@ -1,9 +1,11 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/widget_provider.dart';
 import '../../../models/widget_model.dart';
+import '../../preview/preview_screen_list.dart';
 
 class TopToolbar extends StatelessWidget {
   const TopToolbar({super.key});
@@ -24,7 +26,6 @@ class TopToolbar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Logo
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -42,6 +43,12 @@ class TopToolbar extends StatelessWidget {
               ],
             ),
           ),
+
+          const VerticalDivider(width: 1),
+
+          IconButton(onPressed: (){
+            Navigator.pop(context);
+          }, icon: Icon(Icons.arrow_back_ios_new)),
 
           const VerticalDivider(width: 1),
 
@@ -79,13 +86,33 @@ class TopToolbar extends StatelessWidget {
             },
           ),
 
+          // NEW: Test Registration Screen Button
+          _buildToolbarButton(
+            icon: Icons.person_add,
+            label: 'Test Form',
+            onPressed: () {
+              final widgetProvider = context.read<WidgetProvider>();
+              widgetProvider.createRegistrationScreen();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Registration screen created! Click widgets to edit properties.'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+          ),
+
           const VerticalDivider(width: 1),
 
           _buildToolbarButton(
             icon: Icons.preview,
             label: 'Preview',
-            onPressed: () => _showPreview(context),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PreviewScreenList()),
+            ),
           ),
+
           _buildToolbarButton(
             icon: Icons.save,
             label: 'Save',
@@ -157,48 +184,6 @@ class TopToolbar extends StatelessWidget {
         );
       }
     }
-  }
-
-  void _showPreview(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          width: 400,
-          height: 700,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Preview',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const Divider(),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text('Phone Preview Coming Soon'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   void _showExportDialog(BuildContext context) {
@@ -332,7 +317,7 @@ ${_generateWidgetCode(widgets, apis)}
 
     return buttonsWithAPI.map((widget) {
       final api = apis.firstWhere((a) => a.id == widget.apiEndpointId, orElse: () =>
-          ApiEndpoint(id: '', method: 'GET', path: '/'));
+          ApiEndpoint(id: '', name: 'Default', method: 'GET', path: '/', purpose: '', collection: ''));
 
       return '''
   Future<void> _handle${widget.id}ButtonPress() async {
@@ -343,14 +328,22 @@ ${_generateDataCollection(widgets)}
       };
 
       final response = await http.${api.method.toLowerCase()}(
-        Uri.parse('https://your-api.com${api.path}'),
+        Uri.parse('https://axiom-mmd4.onrender.com/api/dynamic/${api.collection}'),
         headers: {
           'Content-Type': 'application/json',
-${api.auth ? "          'Authorization': 'Bearer YOUR_TOKEN_HERE'," : ''}
+          ${api.auth ? "'Authorization': 'Bearer \${yourAuthToken}'," : ""}
         },
-        body: json.encode(data),
+        body: json.encode({
+          'method': '${api.method}',
+          'purpose': '${api.purpose}',
+          'data': data,
+        }),
       );
 
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final result = json.decode(response.body);
+        print('Success: \${result['message']}');
+        // Handle success (navigate, show message, etc.)
       if (response.statusCode >= 200 && response.statusCode < 300) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -472,11 +465,39 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
-// Data Models
-${_generateMongooseSchemas(dataModels)}
+// Connect to MongoDB
+mongoose.connect('mongodb+srv://aasheeta:rtyfgho;@users.mdpvhwc.mongodb.net/axiom');
 
-// API Routes
-${_generateAPIRoutes(apis)}
+// Dynamic API Routes - No need to create collections manually!
+router.post('/dynamic/:collection', async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const { method, data, purpose } = req.body;
+    
+    // Dynamic model creation - collection created automatically
+    const DynamicModel = mongoose.models[collection] || 
+      mongoose.model(collection, new mongoose.Schema({}, { 
+        strict: false, 
+        collection: collection,
+        timestamps: true 
+      }));
+    
+    const newItem = new DynamicModel({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    
+    await newItem.save();
+    res.status(201).json({ 
+      success: true, 
+      message: 'Data saved successfully',
+      data: newItem 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 module.exports = router;
 ''';

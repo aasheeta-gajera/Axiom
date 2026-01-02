@@ -1,9 +1,10 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../../providers/widget_provider.dart';
-import '../../../providers/project_provider.dart';
 import '../../../models/widget_model.dart';
+import 'event_binding_panel.dart';
 
 class PropertiesPanel extends StatelessWidget {
   const PropertiesPanel({super.key});
@@ -13,6 +14,7 @@ class PropertiesPanel extends StatelessWidget {
     return Consumer<WidgetProvider>(
       builder: (context, provider, child) {
         final selectedWidget = provider.selectedWidget;
+        print('🏠 Properties panel - Selected widget: ${selectedWidget?.id}');
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,170 +105,15 @@ class PropertiesPanel extends StatelessWidget {
           // Dynamic properties based on widget type
           ..._buildWidgetSpecificProperties(context, selectedWidget, provider),
 
-          // API BINDING SECTION (for Button and TextField widgets)
-          if (selectedWidget.type == 'Button' || selectedWidget.type == 'TextField')
-            _buildAPIBindingSection(context, selectedWidget, provider),
+          //API BINDING SECTION (for Button and TextField widgets)
+          // if (selectedWidget.type == 'Button' || selectedWidget.type == 'TextField')
+          //   _buildAPIBindingSection(context, selectedWidget, provider),
+          if (selectedWidget.type == 'Button' ||
+              selectedWidget.type == 'TextField' ||
+              selectedWidget.type == 'TextFormField')
+            EventBindingPanel(widget: selectedWidget),
         ],
       ),
-    );
-  }
-
-  Widget _buildAPIBindingSection(
-      BuildContext context,
-      WidgetModel widget,
-      WidgetProvider provider,
-      ) {
-    return Consumer<ProjectProvider>(
-      builder: (context, projectProvider, child) {
-        final apis = projectProvider.currentProject?.apis ?? [];
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.api, size: 20, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text(
-                  'API Binding',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // API Selection Dropdown
-            if (apis.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Column(
-                  children: [
-                    const Text('No APIs available'),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/api-management');
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create API'),
-                    ),
-                  ],
-                ),
-              )
-            else
-              DropdownButtonFormField<String>(
-                value: widget.apiEndpointId,
-                decoration: const InputDecoration(
-                  labelText: 'Select API Endpoint',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  const DropdownMenuItem(
-                    value: null,
-                    child: Text('None'),
-                  ),
-                  ...apis.map((api) {
-                    return DropdownMenuItem(
-                      value: api.id,
-                      child: Text('${api.method} ${api.path}'),
-                    );
-                  }),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    final selectedApi = apis.firstWhere((api) => api.id == value);
-                    final updatedWidget = widget.copyWith(
-                      apiEndpointId: selectedApi.id,
-                      apiMethod: selectedApi.method,
-                      apiPath: selectedApi.path,
-                      requiresAuth: selectedApi.auth,
-                    );
-                    provider.updateWidget(updatedWidget);
-                  } else {
-                    final updatedWidget = widget.copyWith(
-                      apiEndpointId: null,
-                      apiMethod: null,
-                      apiPath: null,
-                      requiresAuth: false,
-                    );
-                    provider.updateWidget(updatedWidget);
-                  }
-                },
-              ),
-
-            // Show API details if selected
-            if (widget.apiEndpointId != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'API Connected',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Method: ${widget.apiMethod}'),
-                    Text('Path: ${widget.apiPath}'),
-                    if (widget.requiresAuth)
-                      const Row(
-                        children: [
-                          Icon(Icons.lock, size: 16, color: Colors.orange),
-                          SizedBox(width: 4),
-                          Text('Requires Authentication'),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ],
-
-            // Action explanation based on widget type
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.blue),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.type == 'Button'
-                          ? 'Button will call this API when clicked'
-                          : 'TextField data will be sent to this API',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -281,18 +128,13 @@ class PropertiesPanel extends StatelessWidget {
     switch (widget.type) {
       case 'Text':
         fields.addAll([
-          _buildTextField('Text', props['text'] ?? '',
-                  (value) => provider.updateWidgetProperty(widget.id, 'text', value)),
+          _buildTextField('Text', props['text'] ?? '', (value) => provider.updateWidgetProperty(widget.id, 'text', value)),
           const SizedBox(height: 16),
-          _buildNumberField('Font Size', props['fontSize']?.toDouble() ?? 16.0,
-                  (value) => provider.updateWidgetProperty(widget.id, 'fontSize', value)),
+          _buildNumberField('Font Size', props['fontSize']?.toDouble() ?? 16.0, (value) => provider.updateWidgetProperty(widget.id, 'fontSize', value)),
           const SizedBox(height: 16),
-          _buildColorPicker(context, 'Text Color', props['color'] ?? '#000000',
-                  (color) => provider.updateWidgetProperty(widget.id, 'color', color)),
+          _buildColorPicker(context, 'Text Color', props['color'] ?? '#000000', (color) => provider.updateWidgetProperty(widget.id, 'color', color)),
           const SizedBox(height: 16),
-          _buildDropdown('Font Weight', props['fontWeight'] ?? 'normal',
-              ['normal', 'bold', 'w300', 'w500', 'w700'],
-                  (value) => provider.updateWidgetProperty(widget.id, 'fontWeight', value)),
+          _buildDropdown('Font Weight', props['fontWeight'] ?? 'normal', ['normal', 'bold', 'w300', 'w500', 'w700'], (value) => provider.updateWidgetProperty(widget.id, 'fontWeight', value)),
         ]);
         break;
 

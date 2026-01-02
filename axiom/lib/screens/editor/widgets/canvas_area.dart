@@ -96,11 +96,16 @@ class _CanvasAreaState extends State<CanvasArea> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
+    print('🎨 Building widget: ${widget.id} - Selected: $isSelected');
+
    return Positioned(
       left: isMobile ? widget.position.dx * 0.7 : widget.position.dx,
       top: isMobile ? widget.position.dy * 0.7 : widget.position.dy,
       child: GestureDetector(
-        onTap: () => provider.selectWidget(widget),
+        onTap: () {
+          print('👆 Canvas tap detected on widget: ${widget.id} - Type: ${widget.type}');
+          provider.selectWidget(widget);
+        },
         child: Draggable<WidgetModel>(
           data: widget,
           feedback: Material(
@@ -123,7 +128,7 @@ class _CanvasAreaState extends State<CanvasArea> {
             decoration: BoxDecoration(
               border: isSelected
                   ? Border.all(color: Colors.blue, width: 2)
-                  : null,
+                  : Border.all(color: Colors.transparent, width: 1),
             ),
             child: _renderWidget(widget, false),
           ),
