@@ -58,7 +58,7 @@ const apiEndpointSchema = new mongoose.Schema({
   description: String,
   purpose: String,
   auth: { type: Boolean, default: false },
-  collectionName: String, 
+  collectionName: { type: String }, 
   fields: [apiFieldSchema],
   createCollection: { type: Boolean, default: false },
   requestExample: mongoose.Schema.Types.Mixed,
