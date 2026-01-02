@@ -119,4 +119,4 @@ projectSchema.index({ owner: 1 });
 projectSchema.index({ name: 'text', description: 'text' });
 projectSchema.index({ createdAt: -1 });
 
-export const Project = mongoose.model('Project', projectSchema, 'axiom');
+export const Project = mongoose.model('Project', projectSchema);
