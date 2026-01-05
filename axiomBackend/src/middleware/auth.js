@@ -1,7 +1,6 @@
-// const jwt = require('jsonwebtoken');
 import jwt from 'jsonwebtoken';
 
-export const auth = (req, res, next) => {
+const auth = (req, res, next) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
@@ -16,3 +15,5 @@ export const auth = (req, res, next) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
+
+export default auth;
