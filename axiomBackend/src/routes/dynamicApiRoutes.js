@@ -8,6 +8,11 @@ const router = Router();
 
 // Helper function to get or create a dynamic model
 function getDynamicModel(collectionName) {
+  // Validate collection name
+  if (!collectionName || typeof collectionName !== 'string') {
+    throw new Error('Collection name must be a string');
+  }
+  
   // Check if model already exists
   if (mongoose.models[collectionName]) {
     return mongoose.models[collectionName];
@@ -120,6 +125,8 @@ router.use(async (req, res, next) => {
     }
     
     console.log(`📋 Found API config: ${apiConfig.name} (${apiConfig.purpose})`);
+    console.log('🔍 API Config details:', JSON.stringify(apiConfig, null, 2));
+    console.log('🔍 Collection name:', apiConfig.collectionName);
     
     // Check authentication if required
     if (apiConfig.auth) {
@@ -136,8 +143,17 @@ router.use(async (req, res, next) => {
       }
     }
     
+    // Validate collection name before creating model
+    if (!apiConfig.collectionName) {
+      console.error('❌ Collection name is missing in API config');
+      return res.status(500).json({ 
+        error: 'Configuration error', 
+        message: 'Collection name not specified in API configuration' 
+      });
+    }
+    
     // Get the dynamic model for the collection
-    const DynamicModel = getDynamicModel(apiConfig.collection);
+    const DynamicModel = getDynamicModel(apiConfig.collectionName);
     
     // Handle different HTTP methods
     let result;
