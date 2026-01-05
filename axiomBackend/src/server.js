@@ -20,7 +20,7 @@ class Server {
     this.server = http.createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
-        origin: process.env.FRONTEND_URL || ['http://localhost:8080', 'http://localhost:61890'],
+        origin: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE']
       }
     });
@@ -30,7 +30,7 @@ class Server {
   setupMiddleware() {
     // CORS middleware
     this.app.use(cors({
-      origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+      origin: true,
       credentials: true,
     }));
 
