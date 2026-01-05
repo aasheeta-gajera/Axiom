@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/project_provider.dart';
 import '../../models/widget_model.dart';
-import '../../models/api_endpoint_model.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import 'editor/widgets/api_creation_dialog.dart';
 
@@ -94,7 +91,7 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
     );
     
     if (result != null) {
-      await _saveAPI(result);
+      await _createAPI(result);
     }
   }
 
@@ -109,41 +106,22 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
     }
   }
 
-  Future<void> _saveAPI(ApiEndpoint api) async {
+  Future<void> _createAPI(ApiEndpoint api) async {
     setState(() => _isLoading = true);
 
     try {
       final projectProvider = context.read<ProjectProvider>();
-      final authService = context.read<AuthService>();
-      final projectId = projectProvider.currentProject?.id;
-
-      if (projectId == null) return;
-
-      await authService.loadToken();
-
-      final response = await http.post(
-        Uri.parse('https://axiom-mmd4.onrender.com/api/apis/$projectId/endpoints'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
-        },
-        body: json.encode(api.toJson()),
-      );
-
-      if (response.statusCode == 201) {
-        await projectProvider.loadProject(projectId);
-        await _loadAPIs();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ API created successfully')),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('❌ Failed (${response.statusCode}): ${response.body}')),
-          );
-        }
+      
+      // Use project provider to create API (this handles the backend call)
+      await projectProvider.createOrUpdateAPI(api);
+      
+      // Reload the APIs list
+      await _loadAPIs();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ API created successfully')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -161,36 +139,17 @@ class _APIManagementScreenState extends State<APIManagementScreen> {
 
     try {
       final projectProvider = context.read<ProjectProvider>();
-      final authService = context.read<AuthService>();
-      final projectId = projectProvider.currentProject?.id;
-
-      if (projectId == null) return;
-
-      await authService.loadToken();
-
-      final response = await http.put(
-        Uri.parse('https://axiom-mmd4.onrender.com/api/apis/$projectId/endpoints/${api.id}'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
-        },
-        body: json.encode(api.toJson()),
-      );
-
-      if (response.statusCode == 200) {
-        await projectProvider.loadProject(projectId);
-        await _loadAPIs();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ API updated successfully')),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('❌ Failed (${response.statusCode}): ${response.body}')),
-          );
-        }
+      
+      // Use project provider to update API (this handles the backend call)
+      await projectProvider.createOrUpdateAPI(api);
+      
+      // Reload the APIs list
+      await _loadAPIs();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ API updated successfully')),
+        );
       }
     } catch (e) {
       if (mounted) {

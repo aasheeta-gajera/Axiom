@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../models/widget_model.dart';
+import '../../services/auth_service.dart';
 
 class InteractivePreviewScreen extends StatefulWidget {
   final ScreenModel screen;
@@ -242,6 +242,10 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
     }
 
     try {
+      // Load auth token for authenticated requests
+      final authService = AuthService();
+      await authService.loadToken();
+
       // Ensure path starts with /
       String apiPath = event.apiPath ?? '';
       if (!apiPath.startsWith('/')) {
@@ -256,13 +260,19 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
       print('   URL: $url');
       print('   Data: $requestData');
 
+      // Prepare headers with authentication
+      Map<String, String> headers = {'Content-Type': 'application/json'};
+      if (authService.token != null) {
+        headers['Authorization'] = 'Bearer ${authService.token}';
+      }
+
       http.Response response;
 
       switch (event.apiMethod?.toUpperCase()) {
         case 'POST':
           response = await http.post(
             Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
+            headers: headers,
             body: json.encode(requestData),
           ).timeout(const Duration(seconds: 10));
           break;
@@ -271,13 +281,13 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
           final uri = Uri.parse(url).replace(
             queryParameters: requestData.map((k, v) => MapEntry(k, v.toString())),
           );
-          response = await http.get(uri).timeout(const Duration(seconds: 10));
+          response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 10));
           break;
 
         case 'PUT':
           response = await http.put(
             Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
+            headers: headers,
             body: json.encode(requestData),
           ).timeout(const Duration(seconds: 10));
           break;
@@ -285,7 +295,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
         case 'DELETE':
           response = await http.delete(
             Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
+            headers: headers,
             body: json.encode(requestData),
           ).timeout(const Duration(seconds: 10));
           break;
@@ -314,7 +324,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
                 ],
               ),
               backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 4),
               action: SnackBarAction(
                 label: 'View',
                 textColor: Colors.white,

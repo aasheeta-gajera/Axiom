@@ -212,7 +212,7 @@ class ApiEndpoint {
   bool auth;
 
   // Database configuration
-  String collection; // MongoDB collection name
+  String collectionName; // MongoDB collection name
   List<ApiField> fields;
   bool createCollection;
 
@@ -228,7 +228,7 @@ class ApiEndpoint {
     this.description = '',
     required this.purpose,
     this.auth = false,
-    required this.collection,
+    required this.collectionName,
     this.fields = const [],
     this.createCollection = false,
     this.requestExample,
@@ -244,7 +244,7 @@ class ApiEndpoint {
       description: json['description'] ?? '',
       purpose: json['purpose'] ?? 'create',
       auth: json['auth'] ?? false,
-      collection: json['collection'] ?? '',
+      collectionName: json['collectionName'] ?? json['collection'] ?? '',
       fields: (json['fields'] as List?)
           ?.map((e) => ApiField.fromJson(e))
           .toList() ?? [],
@@ -263,7 +263,7 @@ class ApiEndpoint {
       'description': description,
       'purpose': purpose,
       'auth': auth,
-      'collection': collection,
+      'collectionName': collectionName,
       'fields': fields.map((e) => e.toJson()).toList(),
       'createCollection': createCollection,
       'requestExample': requestExample,

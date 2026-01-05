@@ -317,7 +317,7 @@ ${_generateWidgetCode(widgets, apis)}
 
     return buttonsWithAPI.map((widget) {
       final api = apis.firstWhere((a) => a.id == widget.apiEndpointId, orElse: () =>
-          ApiEndpoint(id: '', name: 'Default', method: 'GET', path: '/', purpose: '', collection: ''));
+          ApiEndpoint(id: '', name: 'Default', method: 'GET', path: '/', purpose: '', collectionName: ''));
 
       return '''
   Future<void> _handle${widget.id}ButtonPress() async {
@@ -328,7 +328,7 @@ ${_generateDataCollection(widgets)}
       };
 
       final response = await http.${api.method.toLowerCase()}(
-        Uri.parse('https://axiom-mmd4.onrender.com/api/dynamic/${api.collection}'),
+        Uri.parse('https://axiom-mmd4.onrender.com/api/dynamic/${api.collectionName}'),
         headers: {
           'Content-Type': 'application/json',
           ${api.auth ? "'Authorization': 'Bearer \${yourAuthToken}'," : ""}

@@ -52,7 +52,7 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
     _method = api.method;
     _purpose = api.purpose;
     _requiresAuth = api.auth;
-    _collectionName = api.collection;
+    _collectionName = api.collectionName;
     _fields = List.from(api.fields);
     _createNewCollection = api.createCollection;
   }
@@ -626,7 +626,7 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
       description: _descController.text,
       purpose: _purpose,
       auth: _requiresAuth,
-      collection: _collectionName,
+      collectionName: _collectionName,
       fields: _fields,
       createCollection: _createNewCollection,
       requestExample: _requestExample,

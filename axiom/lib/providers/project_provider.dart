@@ -129,8 +129,8 @@ class ProjectProvider extends ChangeNotifier {
       }
 
       // Add collection if new
-      if (api.createCollection && !_currentProject!.collections.contains(api.collection)) {
-        _currentProject!.collections.add(api.collection);
+      if (api.createCollection && !_currentProject!.collections.contains(api.collectionName)) {
+        _currentProject!.collections.add(api.collectionName);
       }
 
       await _projectService.updateProject(_currentProject!);
