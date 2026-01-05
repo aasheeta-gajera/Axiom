@@ -1,3 +1,4 @@
+// const mongoose = require('mongoose');
 import mongoose from 'mongoose';
 
 const widgetSchema = new mongoose.Schema({

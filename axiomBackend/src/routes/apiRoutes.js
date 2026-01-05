@@ -1,7 +1,7 @@
 
 import { Router } from 'express';
 import {Project} from '../models/Project.js';
-import auth from '../middleware/auth.js';
+import {auth} from '../middleware/auth.js';
 import express from 'express';
 import mongoose from 'mongoose';
 const router = Router();
