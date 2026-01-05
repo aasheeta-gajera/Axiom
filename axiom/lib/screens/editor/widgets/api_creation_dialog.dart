@@ -59,9 +59,36 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
 
   Future<void> _loadExistingCollections() async {
     final projectProvider = context.read<ProjectProvider>();
+    
+    // Ensure project is loaded
+    if (projectProvider.currentProject == null) {
+      setState(() {
+        _existingCollections = [];
+      });
+      return;
+    }
+    
+    // Get collections from current project
+    final collections = projectProvider.currentProject!.collections;
+    
+    // Also add collection names from existing APIs
+    final apiCollections = projectProvider.currentProject!.apis
+        .map((api) => api.collectionName)
+        .where((name) => name.isNotEmpty)
+        .toList();
+    
+    // Merge both lists and remove duplicates properly
+    final allCollections = [...collections, ...apiCollections];
+    allCollections.removeWhere((name) => name.isEmpty);
+    
+    // Remove duplicates using Set
+    final uniqueCollections = allCollections.toSet().toList();
+    
     setState(() {
-      _existingCollections = projectProvider.currentProject?.collections ?? [];
+      _existingCollections = uniqueCollections;
     });
+    
+    print('🔍 Loaded collections: $_existingCollections');
   }
 
   @override
@@ -266,7 +293,10 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
               groupValue: _createNewCollection,
               onChanged: (value) => setState(() {
                 _createNewCollection = value!;
-                if (!_createNewCollection) _fields.clear();
+                if (!_createNewCollection) {
+                  _fields.clear();
+                  _loadExistingCollections(); // Reload when switching to existing
+                }
               }),
             ),
             const Text('Create New Collection'),
@@ -276,13 +306,37 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
               groupValue: _createNewCollection,
               onChanged: (value) => setState(() {
                 _createNewCollection = value!;
-                if (!_createNewCollection) _fields.clear();
+                if (!_createNewCollection) {
+                  _fields.clear();
+                  _loadExistingCollections(); // Reload when switching to existing
+                }
               }),
             ),
             const Text('Use Existing Collection'),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+
+        // Debug info
+        if (!_createNewCollection)
+          Container(
+            padding: const EdgeInsets.all(8),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info, size: 16, color: Colors.blue.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'Found ${_existingCollections.length} collections: ${_existingCollections.join(", ")}',
+                  style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                ),
+              ],
+            ),
+          ),
 
         if (_createNewCollection)
           TextField(
@@ -295,9 +349,14 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
           )
         else if (_existingCollections.isNotEmpty)
           DropdownButtonFormField<String>(
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Select Collection *',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _loadExistingCollections,
+                tooltip: 'Refresh Collections',
+              ),
             ),
             items: _existingCollections
                 .map((col) => DropdownMenuItem(value: col, child: Text(col)))
@@ -305,7 +364,30 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
             onChanged: (value) => setState(() => _collectionName = value!),
           )
         else
-          const Text('No existing collections found'),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'No existing collections found. Create a new collection or refresh.',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _loadExistingCollections,
+                  tooltip: 'Refresh Collections',
+                ),
+              ],
+            ),
+          ),
 
         const SizedBox(height: 24),
 
@@ -316,63 +398,112 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
               'Fields',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
-            ElevatedButton.icon(
-              onPressed: _addField,
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Field'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            if (_createNewCollection || _method == 'POST' || _method == 'PUT' || _method == 'DELETE' || _method == 'GET')
+              ElevatedButton.icon(
+                onPressed: _addField,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Field'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
 
-        // Fields List
-        if (_fields.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Text('No fields added yet. Click "Add Field" to start.'),
-            ),
-          )
-        else
-          Container(
-            constraints: const BoxConstraints(maxHeight: 200),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _fields.length,
-              itemBuilder: (context, index) {
-                final field = _fields[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    title: Text(field.name),
-                    subtitle: Text(
-                      '${field.type}${field.required ? " (Required)" : ""}${field.unique ? " (Unique)" : ""}',
+        // Fields List or Info Message
+        if (_createNewCollection || _method == 'POST') ...[
+          if (_fields.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text('No fields added yet. Click "Add Field" to start.'),
+              ),
+            )
+          else
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _fields.length,
+                itemBuilder: (context, index) {
+                  final field = _fields[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      title: Text(field.name),
+                      subtitle: Text(
+                        '${field.type}${field.required ? " (Required)" : ""}${field.unique ? " (Unique)" : ""}',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 20),
+                            onPressed: () => _editField(index),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                            onPressed: () => setState(() => _fields.removeAt(index)),
+                          ),
+                        ],
+                      ),
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 20),
-                          onPressed: () => _editField(index),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                          onPressed: () => setState(() => _fields.removeAt(index)),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
+        ]
+        else ...[
+          if (_fields.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text('No fields added yet. Click "Add Field" to start.'),
+              ),
+            )
+          else
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _fields.length,
+                itemBuilder: (context, index) {
+                  final field = _fields[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      title: Text(field.name),
+                      subtitle: Text(
+                        '${field.type}${field.required ? " (Required)" : ""}${field.unique ? " (Unique)" : ""}',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 20),
+                            onPressed: () => _editField(index),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                            onPressed: () => setState(() => _fields.removeAt(index)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -513,11 +644,19 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
         _method = 'PUT';
         _pathController.text = '/update';
         _requiresAuth = true;
+        // Auto-add ID field for update operations
+        _fields = [
+          ApiField(name: 'id', type: 'String', required: true, unique: true),
+        ];
         break;
       case 'delete':
         _method = 'DELETE';
         _pathController.text = '/delete';
         _requiresAuth = true;
+        // Auto-add ID field for delete operations
+        _fields = [
+          ApiField(name: 'id', type: 'String', required: true, unique: true),
+        ];
         break;
       case 'list':
         _method = 'GET';
@@ -605,8 +744,15 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
           return false;
         }
 
-        if (_fields.isEmpty) {
-          _showError('Please add at least one field');
+        // Only require fields if creating new collection OR if it's a POST/create operation
+        // Exception: PUT and DELETE operations need ID field even with existing collections
+        final needsFields = _createNewCollection || 
+                            _method == 'POST' || 
+                            _method == 'PUT' || 
+                            _method == 'DELETE';
+        
+        if (needsFields && _fields.isEmpty) {
+          _showError('Please add at least one field (ID required for PUT/DELETE operations)');
           return false;
         }
 
@@ -618,6 +764,9 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
   }
 
   Future<void> _createAPI() async {
+    print(' Creating API with createCollection: $_createNewCollection');
+    print(' Collection name: $_collectionName');
+    
     final api = ApiEndpoint(
       id: widget.existingApi?.id ?? 'api_${DateTime.now().millisecondsSinceEpoch}',
       name: _nameController.text,
@@ -637,11 +786,17 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
     final projectProvider = context.read<ProjectProvider>();
     await projectProvider.createOrUpdateAPI(api);
 
+    // Force refresh collections after creating new collection
+    if (_createNewCollection) {
+      print(' New collection created, refreshing collections...');
+      await _loadExistingCollections();
+    }
+
     if (mounted) {
       Navigator.pop(context, api);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ API ${widget.existingApi != null ? "updated" : "created"} successfully'),
+          content: Text(' API ${widget.existingApi != null ? "updated" : "created"} successfully${_createNewCollection ? " with new collection" : ""}'),
           backgroundColor: Colors.green,
         ),
       );

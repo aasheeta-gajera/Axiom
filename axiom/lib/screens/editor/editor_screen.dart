@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/project_provider.dart';
 import '../../services/websocket_service.dart';
+import '../../services/auth_service.dart';
 import 'widgets/widget_palette.dart';
 import 'widgets/canvas_area.dart';
 import 'widgets/properties_panel.dart';
@@ -47,6 +47,33 @@ class _EditorScreenState extends State<EditorScreen> {
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 900;
     final isMobile = MediaQuery.of(context).size.width < 600;
+
+    // Check authentication
+    final authService = context.read<AuthService>();
+    final projectProvider = context.read<ProjectProvider>();
+    
+    if (authService.token == null) {
+      // Not authenticated, redirect to login
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/login');
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (projectProvider.currentProject == null) {
+      // No project loaded, try to load or redirect to dashboard
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await projectProvider.loadProjects();
+        if (projectProvider.currentProject == null) {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey[100],

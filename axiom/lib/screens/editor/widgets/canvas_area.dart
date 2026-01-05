@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/widget_provider.dart';
 import '../../../models/widget_model.dart';
 import 'package:uuid/uuid.dart';
+import 'dynamic_list_view.dart';
 
 class CanvasArea extends StatefulWidget {
   const CanvasArea({super.key});
@@ -338,13 +338,13 @@ class _CanvasAreaState extends State<CanvasArea> {
             border: Border.all(color: Colors.grey.shade300),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: ListView.builder(
-            itemCount: 5,
-            itemBuilder: (context, index) => ListTile(
-              leading: CircleAvatar(child: Text('${index + 1}')),
-              title: Text('List Item ${index + 1}'),
-              subtitle: const Text('Subtitle'),
-            ),
+          child: DynamicListView(
+            dataSource: props['dataSource'] ?? '',
+            itemTemplate: props['itemTemplate'] ?? 'card',
+            direction: props['direction'] ?? 'vertical',
+            scroll: props['scroll'] ?? true,
+            dataField: props['dataField'] ?? 'data',
+            countField: props['countField'] ?? 'count',
           ),
         );
 

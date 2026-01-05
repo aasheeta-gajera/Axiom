@@ -194,6 +194,28 @@ class PropertiesPanel extends StatelessWidget {
                   (value) => provider.updateWidgetProperty(widget.id, 'height', value)),
         ]);
         break;
+
+      case 'ListView':
+        fields.addAll([
+          _buildTextField('Data Source API', props['dataSource'] ?? '',
+                  (value) => provider.updateWidgetProperty(widget.id, 'dataSource', value)),
+          const SizedBox(height: 16),
+          _buildTextField('Item Template', props['itemTemplate'] ?? 'card',
+                  (value) => provider.updateWidgetProperty(widget.id, 'itemTemplate', value)),
+          const SizedBox(height: 16),
+          _buildDropdown('Direction', props['direction'] ?? 'vertical', ['vertical', 'horizontal'], 
+                  (value) => provider.updateWidgetProperty(widget.id, 'direction', value)),
+          const SizedBox(height: 16),
+          _buildSwitch('Scroll', props['scroll'] ?? true,
+                  (value) => provider.updateWidgetProperty(widget.id, 'scroll', value)),
+          const SizedBox(height: 16),
+          _buildTextField('Data Field (for API response)', props['dataField'] ?? 'data',
+                  (value) => provider.updateWidgetProperty(widget.id, 'dataField', value)),
+          const SizedBox(height: 16),
+          _buildTextField('Item Count Field', props['countField'] ?? 'count',
+                  (value) => provider.updateWidgetProperty(widget.id, 'countField', value)),
+        ]);
+        break;
     }
 
     return fields;

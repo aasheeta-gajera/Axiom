@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../models/widget_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/form_data_service.dart';
+import '../editor/widgets/dynamic_list_view.dart';
 
 class InteractivePreviewScreen extends StatefulWidget {
   final ScreenModel screen;
@@ -150,6 +152,24 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
               child: const Icon(Icons.broken_image, size: 48),
             );
           },
+        );
+
+      case 'ListView':
+        return Container(
+          width: (props['width'] ?? 300).toDouble(),
+          height: (props['height'] ?? 400).toDouble(),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DynamicListView(
+            dataSource: props['dataSource'] ?? '',
+            itemTemplate: props['itemTemplate'] ?? 'card',
+            direction: props['direction'] ?? 'vertical',
+            scroll: props['scroll'] ?? true,
+            dataField: props['dataField'] ?? 'data',
+            countField: props['countField'] ?? 'count',
+          ),
         );
 
       default:
@@ -350,6 +370,13 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
                 },
               ),
             ),
+          );
+
+          // Save form data to database
+          await FormDataService.saveFormData(
+            screenId: widget.screen.id,
+            screenName: widget.screen.name,
+            formData: requestData,
           );
 
           // Clear form on success
