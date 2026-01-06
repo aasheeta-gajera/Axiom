@@ -1,7 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../models/widget_model.dart';
+import '../../../models/ApiEndpointmodel.dart';
+import '../../../models/ApiFieldModel.dart';
 import 'dart:convert';
 import '../../../providers/project_provider.dart';
 
@@ -24,6 +25,7 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
   String _method = 'POST';
   String _purpose = 'create';
   bool _requiresAuth = false;
+  String _usageScenario = ''; // New field for usage guidance
 
   // Step 2: Database Configuration
   String _collectionName = '';
@@ -31,7 +33,7 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
   List<String> _existingCollections = [];
   List<ApiField> _fields = [];
 
-  // Step 3: Preview
+  // Step 3: Preview & Usage
   Map<String, dynamic> _requestExample = {};
   Map<String, dynamic> _responseExample = {};
 
@@ -65,17 +67,20 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
       setState(() {
         _existingCollections = [];
       });
+      print('🔍 No project loaded, collections set to empty');
       return;
     }
     
     // Get collections from current project
     final collections = projectProvider.currentProject!.collections;
+    print('🔍 Project collections: $collections');
     
     // Also add collection names from existing APIs
     final apiCollections = projectProvider.currentProject!.apis
         .map((api) => api.collectionName)
         .where((name) => name.isNotEmpty)
         .toList();
+    print('🔍 API collections: $apiCollections');
     
     // Merge both lists and remove duplicates properly
     final allCollections = [...collections, ...apiCollections];
@@ -88,7 +93,8 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
       _existingCollections = uniqueCollections;
     });
     
-    print('🔍 Loaded collections: $_existingCollections');
+    print('🔍 Final collections loaded: $_existingCollections');
+    print('🔍 Total collections count: ${_existingCollections.length}');
   }
 
   @override
@@ -99,7 +105,7 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
         height: 650,
         child: Stepper(
           currentStep: _currentStep,
-          onStepContinue: _currentStep < 2 ? () {
+          onStepContinue: _currentStep < 3 ? () {
             if (_validateStep(_currentStep)) {
               setState(() => _currentStep++);
               if (_currentStep == 2) _generateExamples();
@@ -120,9 +126,14 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
               isActive: _currentStep >= 1,
             ),
             Step(
+              title: const Text('Usage Guidance'),
+              content: _buildUsageStep(),
+              isActive: _currentStep >= 2,
+            ),
+            Step(
               title: const Text('Preview & Create'),
               content: _buildPreviewStep(),
-              isActive: _currentStep >= 2,
+              isActive: _currentStep >= 3,
             ),
           ],
           controlsBuilder: (context, details) {
@@ -130,12 +141,12 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
               padding: const EdgeInsets.only(top: 16),
               child: Row(
                 children: [
-                  if (details.currentStep < 2)
+                  if (details.currentStep < 3)
                     ElevatedButton(
                       onPressed: details.onStepContinue,
                       child: const Text('Next'),
                     ),
-                  if (details.currentStep == 2)
+                  if (details.currentStep == 3)
                     ElevatedButton(
                       onPressed: _createAPI,
                       child: Text(widget.existingApi != null ? 'Update API' : 'Create API'),
@@ -684,7 +695,10 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
           _requestExample[field.name] = DateTime.now().toIso8601String();
           break;
         case 'Array':
-          _requestExample[field.name] = [];
+          _requestExample[field.name] = field.arrayItems ?? [];
+          break;
+        case 'Object':
+          _requestExample[field.name] = field.objectSchema ?? {};
           break;
       }
     }
@@ -696,6 +710,256 @@ class _EnhancedAPICreationDialogState extends State<EnhancedAPICreationDialog> {
       'data': _requestExample,
     };
   }
+
+  Widget _buildUsageStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'API Usage Guidance',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+
+        // Usage Scenario Selector
+        DropdownButtonFormField<String>(
+          value: _usageScenario.isNotEmpty ? _usageScenario : _getSuggestedScenario(),
+          decoration: const InputDecoration(
+            labelText: 'How will this API be used? *',
+            hintText: 'Select usage scenario for UI binding guidance',
+            border: OutlineInputBorder(),
+            helperText: 'This helps generate proper field mapping',
+          ),
+          items: const [
+            DropdownMenuItem(value: 'form_submission', child: Text('Form Submission')),
+            DropdownMenuItem(value: 'data_display', child: Text('Data Display in ListView')),
+            DropdownMenuItem(value: 'search_filter', child: Text('Search with Filters')),
+            DropdownMenuItem(value: 'crud_operations', child: Text('CRUD Operations')),
+            DropdownMenuItem(value: 'custom', child: Text('Custom Implementation')),
+          ],
+          onChanged: (value) => setState(() => _usageScenario = value!),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Usage Guidance based on scenario
+        if (_usageScenario.isNotEmpty) ...[
+          _buildUsageGuidance(),
+        ],
+      ],
+    );
+  }
+
+  String _getSuggestedScenario() {
+    switch (_purpose) {
+      case 'login':
+      case 'register':
+        return 'form_submission';
+      case 'read':
+      case 'list':
+        return 'data_display';
+      case 'create':
+        return 'form_submission';
+      case 'update':
+      case 'delete':
+        return 'crud_operations';
+      default:
+        return 'custom';
+    }
+  }
+
+  Widget _buildUsageGuidance() {
+    switch (_usageScenario) {
+      case 'form_submission':
+        return _buildFormSubmissionGuidance();
+      case 'data_display':
+        return _buildDataDisplayGuidance();
+      case 'search_filter':
+        return _buildSearchFilterGuidance();
+      case 'crud_operations':
+        return _buildCrudOperationsGuidance();
+      case 'custom':
+        return _buildCustomImplementationGuidance();
+      default:
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text('Select a usage scenario to see guidance'),
+        );
+    }
+  }
+
+  Widget _buildFormSubmissionGuidance() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '📝 Form Submission Usage',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text('1. Drag Form Components:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • TextField for each field'),
+          const Text('   • Button for submission'),
+          const SizedBox(height: 8),
+          const Text('2. Bind Button to API:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Select this API in button properties'),
+          const Text('   • Map fields: formField → apiField'),
+          const SizedBox(height: 8),
+          const Text('3. Test Form:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Fill form and click button'),
+          const Text('   • Check API response in console'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataDisplayGuidance() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '📊 Data Display Usage',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text('1. Drag ListView:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Add ListView to canvas'),
+          const Text('   • Set Data Source API to this endpoint'),
+          const Text('   • Configure item template and data field'),
+          const SizedBox(height: 8),
+          const Text('2. Automatic Data:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • ListView will automatically fetch and display data'),
+          const Text('   • Supports pagination and search parameters'),
+          const SizedBox(height: 8),
+          const Text('3. Advanced Usage:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Add search field to filter results'),
+          const Text('   • Add sort options for better UX'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchFilterGuidance() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '🔍 Search with Filters Usage',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text('1. Search Components:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • TextField for search input'),
+          const Text('   • Button for search action'),
+          const Text('   • ListView for filtered results'),
+          const SizedBox(height: 8),
+          const Text('2. API Integration:', style: TextStyle(fontWeight: FontWeight.w500)),
+          Text('   • Search API: ' + _pathController.text + '?search=keyword'),
+          const Text('   • Map search field to search parameter'),
+          const SizedBox(height: 8),
+          const Text('3. Real-time Updates:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Use onChanged to update ListView URL dynamically'),
+          const Text('   • Supports multiple filter parameters'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCrudOperationsGuidance() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '⚙️ CRUD Operations Usage',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text('1. Setup Forms:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Create form with all fields'),
+          const Text('   • Edit form with ID field'),
+          const Text('   • Delete button with ID confirmation'),
+          const SizedBox(height: 8),
+          const Text('2. API Endpoints:', style: TextStyle(fontWeight: FontWeight.w500)),
+          Text('   • Create: POST ' + _pathController.text),
+          Text('   • Read: GET ' + _pathController.text + '/:id'),
+          Text('   • Update: PUT ' + _pathController.text + '/:id'),
+          Text('   • Delete: DELETE ' + _pathController.text + '/:id'),
+          const SizedBox(height: 8),
+          const Text('3. ListView Integration:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Configure different templates for each operation'),
+          const Text('   • Use conditional rendering based on operation type'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomImplementationGuidance() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.purple.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '🎨 Custom Implementation',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text('1. Define Your Use Case:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • What specific problem does this API solve?'),
+          const Text('   • Who are the users?'),
+          const Text('   • What workflows need support?'),
+          const SizedBox(height: 8),
+          const Text('2. Design Components:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Choose appropriate widgets for your use case'),
+          const Text('   • Consider user experience and accessibility'),
+          const SizedBox(height: 8),
+          const Text('3. Implementation Tips:', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text('   • Start with minimum viable product'),
+          const Text('   • Add error handling and loading states'),
+          const Text('   • Test with real data scenarios'),
+          const Text('   • Document API usage for team'),
+        ],
+      ),
+    );
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -821,6 +1085,11 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
   bool _required = false;
   bool _unique = false;
   String? _validation;
+  dynamic _defaultValue;
+  final _descriptionController = TextEditingController();
+  List<dynamic> _arrayItems = [];
+  final _jsonController = TextEditingController();
+  bool _showJsonEditor = false;
 
   @override
   void initState() {
@@ -831,6 +1100,12 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
       _required = widget.field!.required;
       _unique = widget.field!.unique;
       _validation = widget.field!.validation;
+      _defaultValue = widget.field!.defaultValue;
+      _descriptionController.text = widget.field!.description ?? '';
+      _arrayItems = widget.field!.arrayItems ?? [];
+      if (widget.field!.objectSchema != null) {
+        _jsonController.text = const JsonEncoder.withIndent('  ').convert(widget.field!.objectSchema);
+      }
     }
   }
 
@@ -838,46 +1113,200 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.field != null ? 'Edit Field' : 'Add Field'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Field Name *',
-              hintText: 'e.g., email, username',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _type,
-            decoration: const InputDecoration(
-              labelText: 'Type *',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'String', child: Text('String')),
-              DropdownMenuItem(value: 'Number', child: Text('Number')),
-              DropdownMenuItem(value: 'Boolean', child: Text('Boolean')),
-              DropdownMenuItem(value: 'Date', child: Text('Date')),
-              DropdownMenuItem(value: 'Array', child: Text('Array')),
-              DropdownMenuItem(value: 'ObjectId', child: Text('ObjectId')),
+      content: SizedBox(
+        width: 500,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Field Name *',
+                  hintText: 'e.g., email, username, tags',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<String>(
+                      value: _type,
+                      decoration: const InputDecoration(
+                        labelText: 'Type *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'String', child: Text('String')),
+                        DropdownMenuItem(value: 'Number', child: Text('Number')),
+                        DropdownMenuItem(value: 'Boolean', child: Text('Boolean')),
+                        DropdownMenuItem(value: 'Date', child: Text('Date')),
+                        DropdownMenuItem(value: 'ObjectId', child: Text('ObjectId')),
+                        DropdownMenuItem(value: 'Array', child: Text('Array')),
+                        DropdownMenuItem(value: 'Object', child: Text('Object')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _type = value!;
+                          _showJsonEditor = (value == 'Object' || value == 'Array');
+                          // Show array structure dialog for Array type
+                          if (value == 'Array') {
+                            _showArrayStructureDialog();
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_type == 'Array')
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showArrayStructureDialog(),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit Array'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade100,
+                          foregroundColor: Colors.blue.shade800,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  hintText: 'Describe this field for UI guidance',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              
+              // Array-specific options
+              if (_type == 'Array') ...[
+                const Text('Array Items (JSON format):', 
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                
+                // Quick templates for common array types
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        _jsonController.text = '["item1", "item2", "item3"]';
+                        setState(() {});
+                      },
+                      child: const Text('Simple Array'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        _jsonController.text = '[{"name": "value1", "quantity": 1}, {"name": "value2", "quantity": 2}]';
+                        setState(() {});
+                      },
+                      child: const Text('Object Array'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        _jsonController.text = '[{"key": "value", "number": 123, "boolean": true}]';
+                        setState(() {});
+                      },
+                      child: const Text('Mixed Types'),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8),
+                Container(
+                  height: 120,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: TextField(
+                    controller: _jsonController,
+                    decoration: const InputDecoration(
+                      hintText: '[{"name": "ingredient", "quantity": "2 cups", "unit": "cups"}]',
+                      border: InputBorder.none,
+                      helperText: 'Enter JSON array with objects for key-value pairs',
+                    ),
+                    maxLines: 6,
+                    onChanged: (value) {
+                      try {
+                        if (value.isNotEmpty) {
+                          _arrayItems = json.decode(value);
+                        }
+                      } catch (e) {
+                        // Invalid JSON, keep current items
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  ' Tip: Use objects in arrays for key-value pairs like ingredients',
+                  style: TextStyle(color: Colors.blue.shade600, fontSize: 12),
+                ),
+              ],
+              
+              // Object-specific JSON editor
+              if (_type == 'Object') ...[
+                const Text('Object Schema (JSON format):', 
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  height: 150,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: TextField(
+                    controller: _jsonController,
+                    decoration: const InputDecoration(
+                      hintText: '{\n  "field1": "value1",\n  "field2": "value2"\n}',
+                      border: InputBorder.none,
+                    ),
+                    maxLines: 8,
+                    onChanged: (value) {
+                      // Just store the JSON, validation on save
+                    },
+                  ),
+                ),
+              ],
+              
+              // Default value for simple types
+              if (_type != 'Array' && _type != 'Object') ...[
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Default Value',
+                    hintText: 'e.g., John Doe, true, 123',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => _defaultValue = value,
+                ),
+              ],
+              
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                title: const Text('Required'),
+                value: _required,
+                onChanged: (value) => setState(() => _required = value!),
+              ),
+              CheckboxListTile(
+                title: const Text('Unique'),
+                value: _unique,
+                onChanged: (value) => setState(() => _unique = value!),
+              ),
             ],
-            onChanged: (value) => setState(() => _type = value!),
           ),
-          const SizedBox(height: 12),
-          CheckboxListTile(
-            title: const Text('Required'),
-            value: _required,
-            onChanged: (value) => setState(() => _required = value!),
-          ),
-          CheckboxListTile(
-            title: const Text('Unique'),
-            value: _unique,
-            onChanged: (value) => setState(() => _unique = value!),
-          ),
-        ],
+        ),
       ),
       actions: [
         TextButton(
@@ -885,20 +1314,142 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_nameController.text.isNotEmpty) {
-              widget.onSave(ApiField(
-                name: _nameController.text,
-                type: _type,
-                required: _required,
-                unique: _unique,
-                validation: _validation,
-              ));
-            }
-          },
+          onPressed: _saveField,
           child: const Text('Save'),
         ),
       ],
     );
+  }
+
+  void _showArrayStructureDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Define Array Structure'),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Choose array type:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              
+              ListTile(
+                title: const Text('Simple Array'),
+                subtitle: const Text('Array of simple values: ["item1", "item2"]'),
+                leading: const Icon(Icons.list),
+                onTap: () {
+                  _jsonController.text = '["item1", "item2", "item3"]';
+                  Navigator.pop(context);
+                },
+              ),
+              
+              ListTile(
+                title: const Text('Object Array'),
+                subtitle: const Text('Array of objects with keys: [{"name": "value"}]'),
+                leading: const Icon(Icons.format_list_bulleted),
+                onTap: () {
+                  _jsonController.text = '[{"name": "", "quantity": "", "unit": ""}]';
+                  Navigator.pop(context);
+                },
+              ),
+              
+              ListTile(
+                title: const Text('Mixed Types'),
+                subtitle: const Text('Array with mixed data types'),
+                leading: const Icon(Icons.category),
+                onTap: () {
+                  _jsonController.text = '[{"key": "value", "number": 123}]';
+                  Navigator.pop(context);
+                },
+              ),
+              
+              const SizedBox(height: 16),
+              const Text('Or define custom structure:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Enter custom JSON array',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+                onChanged: (value) {
+                  _jsonController.text = value;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {});
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _saveField() {
+    if (_nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter field name'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate JSON for Array/Object types
+    if ((_type == 'Array' || _type == 'Object') && _jsonController.text.isNotEmpty) {
+      try {
+        if (_type == 'Array') {
+          _arrayItems = json.decode(_jsonController.text);
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid JSON format'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    Map<String, dynamic>? objectSchema;
+    if (_type == 'Object' && _jsonController.text.isNotEmpty) {
+      try {
+        objectSchema = json.decode(_jsonController.text);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid JSON format'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    widget.onSave(ApiField(
+      name: _nameController.text,
+      type: _type,
+      required: _required,
+      unique: _unique,
+      validation: _validation,
+      defaultValue: _defaultValue,
+      description: _descriptionController.text,
+      arrayItems: _arrayItems,
+      objectSchema: objectSchema,
+    ));
   }
 }

@@ -1,9 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../../providers/widget_provider.dart';
+import '../../../providers/project_provider.dart';
 import '../../../models/widget_model.dart';
+import '../../../models/ApiEndpointmodel.dart';
 import 'event_binding_panel.dart';
 
 class PropertiesPanel extends StatelessWidget {
@@ -176,6 +177,8 @@ class PropertiesPanel extends StatelessWidget {
           const SizedBox(height: 16),
           _buildTextField('Field Key (for API)', props['fieldKey'] ?? '',
                   (value) => provider.updateWidgetProperty(widget.id, 'fieldKey', value)),
+          const SizedBox(height: 16),
+          _buildDynamicArrayKeySelector(context, widget, provider),
           const SizedBox(height: 16),
           _buildSwitch('Obscure Text', props['obscureText'] ?? false,
                   (value) => provider.updateWidgetProperty(widget.id, 'obscureText', value)),
@@ -370,5 +373,142 @@ class PropertiesPanel extends StatelessWidget {
 
   String _colorToHex(Color color) {
     return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+  }
+
+  Widget _buildDynamicArrayKeySelector(BuildContext context, WidgetModel widget, WidgetProvider provider) {
+    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+    final currentProject = projectProvider.currentProject;
+    
+    if (currentProject == null || currentProject!.apis.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Text(
+          'No APIs available for array binding.',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      );
+    }
+
+    // Get all array fields and their keys
+    final Map<String, List<String>> arrayFields = {};
+    
+    for (var api in currentProject!.apis) {
+      for (var field in api.fields) {
+        if (field.type.toLowerCase() == 'array') {
+          final List<String> keys = [];
+          
+          if (field.arrayItems != null && field.arrayItems!.isNotEmpty) {
+            if (field.arrayItems!.first is Map) {
+              final firstItem = field.arrayItems!.first as Map;
+              keys.addAll(firstItem.keys.cast<String>());
+            } else {
+              keys.addAll(['name', 'value', 'type']);
+            }
+          } else {
+            keys.addAll(['name', 'value', 'type']);
+          }
+          
+          arrayFields[field.name] = keys;
+        }
+      }
+    }
+
+    if (arrayFields.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Text(
+          'No array fields found.',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+
+        // Array Field Selector
+        const Text('Array Field:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: widget.properties['arrayField']?.isNotEmpty == true ? widget.properties['arrayField'] : null,
+          decoration: const InputDecoration(
+            hintText: 'Select array field',
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          items: arrayFields.keys.map((fieldName) {
+            return DropdownMenuItem(value: fieldName, child: Text(fieldName));
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              provider.updateWidgetProperty(widget.id, 'arrayField', value);
+              provider.updateWidgetProperty(widget.id, 'fieldKey', ''); // Reset key when array changes
+              provider.updateWidgetProperty(widget.id, 'arrayKey', ''); // Reset array key when array changes
+            }
+          },
+        ),
+
+        const SizedBox(height: 16),
+
+        // Array Key Selector (appears when array field is selected)
+        if (widget.properties['arrayField'] != null && widget.properties['arrayField']!.isNotEmpty) ...[
+          const Text('Array Key:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: widget.properties['arrayKey']?.isNotEmpty == true &&
+                  arrayFields[widget.properties['arrayField']]?.contains(widget.properties['arrayKey']) == true
+                  ? widget.properties['arrayKey'] : null,
+            decoration: const InputDecoration(
+              hintText: 'Select array key',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            items: arrayFields[widget.properties['arrayField']]?.map((key) {
+              return DropdownMenuItem(value: key, child: Text(key));
+            }).toList() ?? [],
+            onChanged: (value) {
+              if (value != null) {
+                final arrayField = widget.properties['arrayField'] ?? '';
+                final fieldKey = '$arrayField[].$value';
+                provider.updateWidgetProperty(widget.id, 'arrayKey', value);
+                provider.updateWidgetProperty(widget.id, 'fieldKey', fieldKey);
+              }
+            },
+          ),
+
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Generated Field Key:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  widget.properties['fieldKey'] ?? 'Select array key above',
+                  style: const TextStyle(fontSize: 11, color: Colors.green, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }

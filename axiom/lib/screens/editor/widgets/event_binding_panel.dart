@@ -1,6 +1,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../models/ApiEndpointmodel.dart';
+import '../../../models/EventBindingModel.dart';
+import '../../../models/ScreenModel.dart';
 import '../../../models/widget_model.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/widget_provider.dart';
@@ -161,7 +164,7 @@ class EventBindingPanel extends StatelessWidget {
           )
         else
           DropdownButtonFormField<String>(
-            value: binding.apiId,
+            value: apis.isNotEmpty && binding.apiId != null ? binding.apiId : null,
             decoration: const InputDecoration(
               labelText: 'Select API',
               border: OutlineInputBorder(),
@@ -211,6 +214,18 @@ class EventBindingPanel extends StatelessWidget {
         .where((w) => w.type == 'TextField' || w.type == 'TextFormField')
         .toList();
 
+    print('🔍 DEBUG: Field Mapping Check');
+    print('   API: ${api.name}');
+    print('   API Fields: ${api.fields.map((f) => '${f.name} (${f.type})').toList()}');
+    print('   Total TextFields: ${textFields.length}');
+    
+    for (var tf in textFields) {
+      print('   TextField: ${tf.properties['label'] ?? tf.id}');
+      print('   FieldKey: ${tf.properties['fieldKey']}');
+      print('   ArrayField: ${tf.properties['arrayField']}');
+      print('   ArrayKey: ${tf.properties['arrayKey']}');
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -226,7 +241,90 @@ class EventBindingPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          ...api.fields.map((field) {
+          // Array Fields Section - Auto-mapped
+          ...api.fields.where((f) => f.type.toLowerCase() == 'array').map((field) {
+            final arrayTextFields = textFields.where((w) => 
+              w.properties['fieldKey']?.contains('${field.name}[]') == true
+            ).toList();
+            
+            // Auto-map array fields
+            final newMapping = Map<String, String>.from(binding.fieldMapping ?? {});
+            for (final arrayTextField in arrayTextFields) {
+              final arrayKey = arrayTextField.properties['arrayKey'] ?? 'value';
+              newMapping['${field.name}.$arrayKey'] = arrayTextField.id;
+            }
+            
+            print('🔍 Array Field: ${field.name}');
+            print('   ArrayTextFields Found: ${arrayTextFields.length}');
+            print('   Auto-mapping: ${newMapping}');
+            
+            // Update binding with auto-mapped array fields
+            if (newMapping.length != (binding.fieldMapping?.length ?? 0)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                onUpdate(binding.copyWith(fieldMapping: newMapping));
+              });
+            }
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '📦 ${field.name} (Array)',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.purple),
+                    ),
+                    const SizedBox(height: 8),
+                    if (arrayTextFields.isEmpty) ...[
+                      const Text(
+                        '❌ No TextFields mapped to this array field',
+                        style: TextStyle(fontSize: 10, color: Colors.red),
+                      ),
+                      const Text(
+                        '💡 Set up TextFields with array field binding first',
+                        style: TextStyle(fontSize: 9, color: Colors.grey),
+                      ),
+                    ] else ...[
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: arrayTextFields.map((w) {
+                          final label = w.properties['label'] ?? w.properties['hint'] ?? w.id;
+                          final arrayKey = w.properties['arrayKey'] ?? 'Unknown';
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$label → $arrayKey',
+                              style: const TextStyle(fontSize: 10, color: Colors.purple),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '✅ Auto-mapped array fields detected',
+                        style: TextStyle(fontSize: 9, color: Colors.green),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }),
+
+          // Regular Fields Section  
+          ...api.fields.where((f) => f.type.toLowerCase() != 'array').map((field) {
             final currentMapping = binding.fieldMapping?[field.name];
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -244,7 +342,7 @@ class EventBindingPanel extends StatelessWidget {
                   Expanded(
                     flex: 4,
                     child: DropdownButtonFormField<String>(
-                      value: currentMapping,
+                      value: textFields.any((w) => w.id == currentMapping) ? currentMapping : null,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -264,6 +362,7 @@ class EventBindingPanel extends StatelessWidget {
                         } else {
                           newMapping.remove(field.name);
                         }
+                        print('🔧 Updated Field Mapping: $newMapping');
                         onUpdate(binding.copyWith(fieldMapping: newMapping));
                       },
                     ),

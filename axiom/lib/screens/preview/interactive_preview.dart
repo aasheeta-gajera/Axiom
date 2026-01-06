@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../models/EventBindingModel.dart';
+import '../../models/ScreenModel.dart';
 import '../../models/widget_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/form_data_service.dart';
@@ -206,6 +208,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
   Future<void> _callAPI(EventBinding event) async {
     // Collect data using field mapping
     final requestData = <String, dynamic>{};
+    final arrayData = <String, List<Map<String, dynamic>>>{};
 
     if (event.fieldMapping != null && event.fieldMapping!.isNotEmpty) {
       // Use field mapping: API field name -> widget ID
@@ -216,16 +219,75 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
         );
         final fieldKey = widgetModel.properties['fieldKey'] ?? widgetId;
 
-        // Get value from form data
-        if (_formData.containsKey(fieldKey)) {
-          requestData[apiFieldName] = _formData[fieldKey];
-        } else if (_controllers.containsKey(widgetId)) {
-          requestData[apiFieldName] = _controllers[widgetId]!.text;
+        // Check if this is an array field
+        if (fieldKey.contains('[]')) {
+          final parts = fieldKey.split('[]');
+          final arrayFieldName = parts[0];
+          final arrayKeyName = parts.length > 1 ? parts[1].substring(1) : 'value';
+          
+          // Get value from form data
+          if (_formData.containsKey(fieldKey)) {
+            final value = _formData[fieldKey];
+            if (!arrayData.containsKey(arrayFieldName)) {
+              arrayData[arrayFieldName] = [];
+            }
+            arrayData[arrayFieldName]!.add({arrayKeyName: value});
+          } else if (_controllers.containsKey(widgetId)) {
+            final value = _controllers[widgetId]!.text;
+            if (!arrayData.containsKey(arrayFieldName)) {
+              arrayData[arrayFieldName] = [];
+            }
+            arrayData[arrayFieldName]!.add({arrayKeyName: value});
+          }
+        } else {
+          // Regular field
+          if (_formData.containsKey(fieldKey)) {
+            requestData[apiFieldName] = _formData[fieldKey];
+          } else if (_controllers.containsKey(widgetId)) {
+            requestData[apiFieldName] = _controllers[widgetId]!.text;
+          }
         }
       });
+      
+      // Add array data to request
+      requestData.addAll(arrayData);
     } else {
-      // No mapping: use all form data
+      // No mapping: use all form data including array fields
       requestData.addAll(_formData);
+      
+      // Process array fields from all widgets
+      final arrayData = <String, List<Map<String, dynamic>>>{};
+      
+      for (final widgetModel in widget.screen.widgets) {
+        if (widgetModel.type == 'TextField' || widgetModel.type == 'TextFormField') {
+          final fieldKey = widgetModel.properties['fieldKey'] ?? '';
+          
+          // Check if this is an array field
+          if (fieldKey.contains('[]')) {
+            final parts = fieldKey.split('[]');
+            final arrayFieldName = parts[0];
+            final arrayKeyName = parts.length > 1 ? parts[1].substring(1) : 'value';
+            
+            // Get value from form data or controller
+            String value = '';
+            if (_formData.containsKey(fieldKey)) {
+              value = _formData[fieldKey] ?? '';
+            } else if (_controllers.containsKey(widgetModel.id)) {
+              value = _controllers[widgetModel.id]!.text;
+            }
+            
+            if (value.isNotEmpty) {
+              if (!arrayData.containsKey(arrayFieldName)) {
+                arrayData[arrayFieldName] = [];
+              }
+              arrayData[arrayFieldName]!.add({arrayKeyName: value});
+            }
+          }
+        }
+      }
+      
+      // Add array data to request
+      requestData.addAll(arrayData);
     }
 
     // Validate required fields
@@ -279,6 +341,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
       print('   Method: ${event.apiMethod}');
       print('   URL: $url');
       print('   Data: $requestData');
+      print('   Array Data: $arrayData');
 
       // Prepare headers with authentication
       Map<String, String> headers = {'Content-Type': 'application/json'};
