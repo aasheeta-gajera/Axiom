@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../models/ApiEndpointmodel.dart';
 import '../../../models/DataModel.dart';
-import '../../../providers/project_provider.dart';
-import '../../../providers/widget_provider.dart';
+import '../../../providers/ProjectProvider.dart';
+import '../../../providers/WidgetProvider.dart';
 import '../../../models/widget_model.dart';
-import '../../preview/preview_screen_list.dart';
+import '../../preview/PreviewList.dart';
 
 class TopToolbar extends StatelessWidget {
   const TopToolbar({super.key});
@@ -111,7 +111,7 @@ class TopToolbar extends StatelessWidget {
             label: 'Preview',
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const PreviewScreenList()),
+              MaterialPageRoute(builder: (context) => const PreviewList()),
             ),
           ),
 

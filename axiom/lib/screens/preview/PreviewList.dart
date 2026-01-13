@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/ScreenModel.dart';
-import '../../providers/project_provider.dart';
+import '../../providers/ProjectProvider.dart';
 import '../../models/widget_model.dart';
 import '../../services/form_data_service.dart';
-import 'interactive_preview.dart';
+import 'InteractivePreview.dart';
 
-class PreviewScreenList extends StatefulWidget {
-  const PreviewScreenList({super.key});
+class PreviewList extends StatefulWidget {
+  const PreviewList({super.key});
 
   @override
-  State<PreviewScreenList> createState() => _PreviewScreenListState();
+  State<PreviewList> createState() => _PreviewListState();
 }
 
-class _PreviewScreenListState extends State<PreviewScreenList> {
+class _PreviewListState extends State<PreviewList> {
   List<Map<String, dynamic>> _savedForms = [];
   bool _isLoading = true;
 
@@ -154,7 +154,7 @@ class _PreviewCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => InteractivePreviewScreen(screen: screen),
+              builder: (context) => InteractivePreview(screen: screen),
             ),
           );
         },
@@ -229,7 +229,7 @@ class _SavedFormCard extends StatelessWidget {
     final formData = form['formData'] as Map<String, dynamic>? ?? {};
     final screenName = form['screenName'] as String? ?? 'Unknown Screen';
     final createdAt = form['createdAt'] as String? ?? '';
-    
+
     return Card(
       elevation: 3,
       margin: const EdgeInsets.only(bottom: 12),

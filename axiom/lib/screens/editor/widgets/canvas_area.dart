@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/widget_provider.dart';
+import '../../../providers/WidgetProvider.dart';
 import '../../../models/widget_model.dart';
 import 'package:uuid/uuid.dart';
 import 'dynamic_list_view.dart';

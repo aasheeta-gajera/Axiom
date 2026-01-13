@@ -5,8 +5,8 @@ import '../../../models/ApiEndpointmodel.dart';
 import '../../../models/EventBindingModel.dart';
 import '../../../models/ScreenModel.dart';
 import '../../../models/widget_model.dart';
-import '../../../providers/project_provider.dart';
-import '../../../providers/widget_provider.dart';
+import '../../../providers/ProjectProvider.dart';
+import '../../../providers/WidgetProvider.dart';
 import 'api_creation_dialog.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -270,7 +270,6 @@ class EventBindingPanel extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.purple.shade200),
                 ),
@@ -495,8 +494,8 @@ extension EventBindingExtension on EventBinding {
 }
 
 // Preview Screen List Component
-class PreviewScreenList extends StatelessWidget {
-  const PreviewScreenList({super.key});
+class PreviewList extends StatelessWidget {
+  const PreviewList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +549,7 @@ class _PreviewCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => InteractivePreviewScreen(screen: screen),
+              builder: (context) => InteractivePreview(screen: screen),
             ),
           );
         },
@@ -638,16 +637,16 @@ class _PreviewCard extends StatelessWidget {
 }
 
 // Interactive Preview Screen - CRITICAL FOR YOUR REQUIREMENT
-class InteractivePreviewScreen extends StatefulWidget {
+class InteractivePreview extends StatefulWidget {
   final ScreenModel screen;
 
-  const InteractivePreviewScreen({super.key, required this.screen});
+  const InteractivePreview({super.key, required this.screen});
 
   @override
-  State<InteractivePreviewScreen> createState() => _InteractivePreviewScreenState();
+  State<InteractivePreview> createState() => _InteractivePreviewState();
 }
 
-class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
+class _InteractivePreviewState extends State<InteractivePreview> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, dynamic> _formData = {};
 

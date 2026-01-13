@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../models/ApiEndpointmodel.dart';
 import '../../../models/ApiFieldModel.dart';
 import 'dart:convert';
-import '../../../providers/project_provider.dart';
+import '../../../providers/ProjectProvider.dart';
 
 class EnhancedAPICreationDialog extends StatefulWidget {
   final ApiEndpoint? existingApi;

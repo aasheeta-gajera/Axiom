@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/project_provider.dart';
+import '../../providers/ProjectProvider.dart';
 import '../../services/websocket_service.dart';
 import '../../services/auth_service.dart';
 import 'widgets/widget_palette.dart';

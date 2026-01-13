@@ -8,16 +8,16 @@ import '../../services/auth_service.dart';
 import '../../services/form_data_service.dart';
 import '../editor/widgets/dynamic_list_view.dart';
 
-class InteractivePreviewScreen extends StatefulWidget {
+class InteractivePreview extends StatefulWidget {
   final ScreenModel screen;
 
-  const InteractivePreviewScreen({super.key, required this.screen});
+  const InteractivePreview({super.key, required this.screen});
 
   @override
-  State<InteractivePreviewScreen> createState() => _InteractivePreviewScreenState();
+  State<InteractivePreview> createState() => _InteractivePreviewState();
 }
 
-class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
+class _InteractivePreviewState extends State<InteractivePreview> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, dynamic> _formData = {};
 
@@ -224,7 +224,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
           final parts = fieldKey.split('[]');
           final arrayFieldName = parts[0];
           final arrayKeyName = parts.length > 1 ? parts[1].substring(1) : 'value';
-          
+
           // Get value from form data
           if (_formData.containsKey(fieldKey)) {
             final value = _formData[fieldKey];
@@ -248,26 +248,26 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
           }
         }
       });
-      
+
       // Add array data to request
       requestData.addAll(arrayData);
     } else {
       // No mapping: use all form data including array fields
       requestData.addAll(_formData);
-      
+
       // Process array fields from all widgets
       final arrayData = <String, List<Map<String, dynamic>>>{};
-      
+
       for (final widgetModel in widget.screen.widgets) {
         if (widgetModel.type == 'TextField' || widgetModel.type == 'TextFormField') {
           final fieldKey = widgetModel.properties['fieldKey'] ?? '';
-          
+
           // Check if this is an array field
           if (fieldKey.contains('[]')) {
             final parts = fieldKey.split('[]');
             final arrayFieldName = parts[0];
             final arrayKeyName = parts.length > 1 ? parts[1].substring(1) : 'value';
-            
+
             // Get value from form data or controller
             String value = '';
             if (_formData.containsKey(fieldKey)) {
@@ -275,7 +275,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
             } else if (_controllers.containsKey(widgetModel.id)) {
               value = _controllers[widgetModel.id]!.text;
             }
-            
+
             if (value.isNotEmpty) {
               if (!arrayData.containsKey(arrayFieldName)) {
                 arrayData[arrayFieldName] = [];
@@ -285,7 +285,7 @@ class _InteractivePreviewScreenState extends State<InteractivePreviewScreen> {
           }
         }
       }
-      
+
       // Add array data to request
       requestData.addAll(arrayData);
     }

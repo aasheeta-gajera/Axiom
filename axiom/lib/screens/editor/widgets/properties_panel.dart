@@ -1,8 +1,9 @@
+import 'package:axiom/Library/Utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import '../../../providers/widget_provider.dart';
-import '../../../providers/project_provider.dart';
+import '../../../providers/WidgetProvider.dart';
+import '../../../providers/ProjectProvider.dart';
 import '../../../models/widget_model.dart';
 import '../../../models/ApiEndpointmodel.dart';
 import 'event_binding_panel.dart';
@@ -50,29 +51,12 @@ class PropertiesPanel extends StatelessWidget {
             ),
             Expanded(
               child: selectedWidget == null
-                  ? _buildEmptyState()
+                  ? Utils().buildEmptyState(context,'pp')
                   : _buildPropertiesForm(context, selectedWidget, provider),
             ),
           ],
         );
       },
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.touch_app, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            'Select a widget\nto edit properties',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-          ),
-        ],
-      ),
     );
   }
 
